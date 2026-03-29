@@ -1,8 +1,19 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { v4 as uuidv4 } from "uuid";
-import { MAPS, type CardColor, type DestinationCard, type Route } from "@ttr/shared";
+import { MAPS, type CardColor, type DestinationCard } from "@ttr/shared";
 import { socket } from "./socket";
 import { useAppStore } from "./store";
+import {
+  buildConnectionHighlight,
+  buildOwnedDestinationHighlight,
+  selectActivePlayer,
+  selectCanAct,
+  selectIsMyPendingChoice,
+  selectIsMyTurn,
+  selectMe,
+  selectWinner,
+  type RouteHighlight,
+} from "./entities/game/model";
 import { BoardCanvas } from "./components/BoardCanvas";
 import { HandCards } from "./components/HandCards";
 import { ActionPanel, type ClaimOpt } from "./components/ActionPanel";
@@ -13,75 +24,6 @@ import { PLAYER_COLORS } from "./lib/colors";
 import { defaultLang, getInitialLang, setLangStorage, t, type Lang } from "./lib/i18n";
 
 type Toast = { id: string; kind: "error" | "info"; message: string };
-
-type RouteHighlight = { routeIds: string[]; cityNames: string[] };
-
-const sameRoutePair = (route: Route, from: string, to: string): boolean => (
-  (route.from === from && route.to === to) || (route.from === to && route.to === from)
-);
-
-const buildOwnedDestinationHighlight = (routes: Route[], sessionToken: string, card: DestinationCard): RouteHighlight => {
-  const ownedRoutes = routes.filter((route) => route.ownerSessionToken === sessionToken);
-  const adjacency = new Map<string, { city: string; routeId: string }[]>();
-
-  for (const route of ownedRoutes) {
-    if (!adjacency.has(route.from)) adjacency.set(route.from, []);
-    if (!adjacency.has(route.to)) adjacency.set(route.to, []);
-    adjacency.get(route.from)?.push({ city: route.to, routeId: route.id });
-    adjacency.get(route.to)?.push({ city: route.from, routeId: route.id });
-  }
-
-  const queue = [card.from];
-  const visited = new Set<string>([card.from]);
-  const prev = new Map<string, { city: string; routeId: string }>();
-
-  while (queue.length > 0) {
-    const city = queue.shift() as string;
-    if (city === card.to) break;
-    for (const next of adjacency.get(city) ?? []) {
-      if (visited.has(next.city)) continue;
-      visited.add(next.city);
-      prev.set(next.city, { city, routeId: next.routeId });
-      queue.push(next.city);
-    }
-  }
-
-  if (visited.has(card.to)) {
-    const routeIds: string[] = [];
-    let current = card.to;
-    while (current !== card.from) {
-      const step = prev.get(current);
-      if (!step) break;
-      routeIds.push(step.routeId);
-      current = step.city;
-    }
-    return { routeIds, cityNames: [card.from, card.to] };
-  }
-
-  const collectBranchRoutes = (start: string): string[] => {
-    const branchQueue = [start];
-    const branchVisited = new Set<string>([start]);
-    const routeIds = new Set<string>();
-
-    while (branchQueue.length > 0) {
-      const city = branchQueue.shift() as string;
-      for (const next of adjacency.get(city) ?? []) {
-        routeIds.add(next.routeId);
-        if (!branchVisited.has(next.city)) {
-          branchVisited.add(next.city);
-          branchQueue.push(next.city);
-        }
-      }
-    }
-
-    return [...routeIds];
-  };
-
-  return {
-    routeIds: [...new Set([...collectBranchRoutes(card.from), ...collectBranchRoutes(card.to)])],
-    cityNames: [card.from, card.to],
-  };
-};
 
 export const App = () => {
   const {
@@ -177,22 +119,14 @@ export const App = () => {
   }, [game?.started]);
 
   // ── derived state ──────────────────────────────────────────────────────────
-  const me = useMemo(
-    () => game?.players.find((p) => p.sessionToken === sessionToken)
-      ?? game?.spectators.find((s) => s.sessionToken === sessionToken),
-    [game, sessionToken],
-  );
-  const activePlayer = game?.players[game.activePlayerIndex];
-  const isMyTurn = activePlayer?.sessionToken === sessionToken;
+  const me = useMemo(() => selectMe(game ?? null, sessionToken), [game, sessionToken]);
+  const activePlayer = useMemo(() => selectActivePlayer(game ?? null), [game]);
+  const isMyTurn = useMemo(() => selectIsMyTurn(game ?? null, sessionToken), [game, sessionToken]);
   const pendingChoice = game?.pendingDestinationChoice;
-  const isMyPendingChoice = pendingChoice?.sessionToken === sessionToken;
+  const isMyPendingChoice = useMemo(() => selectIsMyPendingChoice(game ?? null, sessionToken), [game, sessionToken]);
 
-
-  const winner = game?.winnerSessionToken
-    ? game.players.find((p) => p.sessionToken === game.winnerSessionToken)
-    : null;
-
-  const canAct = Boolean(game?.started && !game.finished && isMyTurn && !pendingChoice);
+  const winner = useMemo(() => selectWinner(game ?? null) ?? null, [game]);
+  const canAct = useMemo(() => selectCanAct(game ?? null, sessionToken), [game, sessionToken]);
 
   useEffect(() => {
     const activeToken = activePlayer?.sessionToken ?? null;
@@ -301,10 +235,7 @@ export const App = () => {
 
   const connectionHighlight = useMemo<RouteHighlight>(() => {
     if (!game || !hoveredConnection) return { routeIds: [], cityNames: [] };
-    return {
-      routeIds: game.routes.filter((route) => sameRoutePair(route, hoveredConnection.from, hoveredConnection.to)).map((route) => route.id),
-      cityNames: [hoveredConnection.from, hoveredConnection.to],
-    };
+    return buildConnectionHighlight(game.routes, hoveredConnection.from, hoveredConnection.to);
   }, [game, hoveredConnection]);
 
   const boardHighlight = hoveredDestination ? destinationHighlight : connectionHighlight;
