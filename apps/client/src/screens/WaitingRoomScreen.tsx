@@ -1,0 +1,59 @@
+import { memo } from "react";
+import { MAPS } from "@ttr/shared";
+import type { GameState } from "@ttr/shared";
+import { PLAYER_COLORS } from "../lib/colors";
+import { t, type Lang } from "../lib/i18n";
+
+interface WaitingRoomScreenProps {
+  game: GameState;
+  lang: Lang;
+  sessionToken: string;
+  onStartGame: () => void;
+  onLeave: () => void;
+}
+
+const WaitingRoomScreenComponent = ({
+  game,
+  lang,
+  sessionToken,
+  onStartGame,
+  onLeave,
+}: WaitingRoomScreenProps) => {
+  return (
+    <section className="card" data-testid="waiting-room-screen">
+      <div className="row" style={{ justifyContent: "space-between" }}>
+        <h2>
+          {t(lang, "ui.room")} {game.roomId}
+        </h2>
+        <button onClick={onLeave}>← {t(lang, "ui.leave")}</button>
+      </div>
+      <p>
+        {t(lang, "ui.map")}: {MAPS[game.mapId]?.name ?? game.mapId}
+      </p>
+      <ul>
+        {game.players.map((p: any, i: number) => (
+          <li key={p.sessionToken} style={{ color: PLAYER_COLORS[i] }}>
+            {p.nickname}{" "}
+            {p.sessionToken === sessionToken ? `(${t(lang, "ui.youShort")})` : ""}
+          </li>
+        ))}
+      </ul>
+      <p className="hint">
+        {t(lang, "ui.playersConnected", {
+          need: game.settings.maxPlayers,
+          current: game.players.length,
+        })}
+      </p>
+      <button
+        data-testid="start-game-btn"
+        onClick={onStartGame}
+        disabled={game.players.length < 2}
+      >
+        🚂 {t(lang, "ui.startGame")}
+      </button>
+    </section>
+  );
+};
+
+export const WaitingRoomScreen = memo(WaitingRoomScreenComponent);
+
