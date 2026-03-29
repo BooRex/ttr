@@ -12,6 +12,10 @@
     "noRooms": "No rooms yet.",
     "join": "Join",
     "watch": "Watch",
+    "roomStarted": "In game",
+    "roomWaiting": "Waiting",
+    "youShort": "you",
+    "secondsShort": "s",
     "onlyLandscape": "Landscape only",
     "rotateDevice": "Rotate your device to landscape to continue.",
     "yourTurn": "Your turn",
@@ -49,6 +53,10 @@
     "deckCount": "in deck",
     "claimedMixed": "combination",
     "builtRoutes": "completed routes"
+  },
+  "errors": {
+    "enterNickname": "Enter nickname",
+    "selectRouteFirst": "Select a route on the map first"
   },
   "cards": {
     "red": "red",

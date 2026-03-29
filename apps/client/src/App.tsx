@@ -174,12 +174,12 @@ export const App = () => {
 
   // ── actions ────────────────────────────────────────────────────────────────
   const createRoom = () => {
-    if (!nickname.trim()) { addToast("error", "Введите ник"); return; }
+    if (!nickname.trim()) { addToast("error", t(lang, "errors.enterNickname")); return; }
     socket.emit("room:create", { nickname, sessionToken, mapId, maxPlayers, turnTimerSeconds: timer > 0 ? timer : null });
   };
 
   const joinRoom = (id: string, asSpectator = false) => {
-    if (!nickname.trim()) { addToast("error", "Введите ник"); return; }
+    if (!nickname.trim()) { addToast("error", t(lang, "errors.enterNickname")); return; }
     socket.emit("room:join", { roomId: id, nickname, sessionToken, asSpectator });
   };
 
@@ -190,7 +190,7 @@ export const App = () => {
   };
 
   const claimRoute = () => {
-    if (!selectedRouteId) { addToast("error", "Сначала выберите маршрут на карте"); return; }
+    if (!selectedRouteId) { addToast("error", t(lang, "errors.selectRouteFirst")); return; }
     socket.emit("game:claim-route", {
       roomId,
       sessionToken,
@@ -295,10 +295,10 @@ export const App = () => {
                   <span className="room-info">
                     <strong>{r.roomId}</strong>
                     {" "}— {r.playersCount}/{r.maxPlayers} {t(lang, "ui.players")}
-                    {r.timerSeconds ? ` • ${r.timerSeconds}с` : ""}
+                    {r.timerSeconds ? ` • ${r.timerSeconds}${t(lang, "ui.secondsShort")}` : ""}
                     {" "}
                     <span className={r.started ? "badge started" : "badge waiting"}>
-                      {r.started ? "Идёт игра" : "Ожидание"}
+                      {r.started ? t(lang, "ui.roomStarted") : t(lang, "ui.roomWaiting")}
                     </span>
                   </span>
                   <div className="row">
@@ -323,7 +323,7 @@ export const App = () => {
           <ul>
             {game.players.map((p, i) => (
               <li key={p.sessionToken} style={{ color: PLAYER_COLORS[i] }}>
-                {p.nickname} {p.sessionToken === sessionToken ? "(вы)" : ""}
+                {p.nickname} {p.sessionToken === sessionToken ? `(${t(lang, "ui.youShort")})` : ""}
               </li>
             ))}
           </ul>

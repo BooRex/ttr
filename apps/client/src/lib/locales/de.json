@@ -12,6 +12,10 @@
     "noRooms": "Noch keine Räume.",
     "join": "Beitreten",
     "watch": "Zuschauen",
+    "roomStarted": "Spiel läuft",
+    "roomWaiting": "Warten",
+    "youShort": "du",
+    "secondsShort": "s",
     "onlyLandscape": "Nur Landscape",
     "rotateDevice": "Drehe dein Gerät ins Querformat, um fortzufahren.",
     "yourTurn": "Du bist dran",
@@ -49,6 +53,10 @@
     "deckCount": "im Stapel",
     "claimedMixed": "Kombination",
     "builtRoutes": "erfüllte Routen"
+  },
+  "errors": {
+    "enterNickname": "Nickname eingeben",
+    "selectRouteFirst": "Wähle zuerst eine Strecke auf der Karte"
   },
   "cards": {
     "red": "rot",

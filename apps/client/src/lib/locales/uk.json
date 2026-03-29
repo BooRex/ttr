@@ -12,6 +12,10 @@
     "noRooms": "Кімнат поки немає.",
     "join": "Увійти",
     "watch": "Дивитися",
+    "roomStarted": "Гра триває",
+    "roomWaiting": "Очікування",
+    "youShort": "ви",
+    "secondsShort": "с",
     "onlyLandscape": "Лише landscape",
     "rotateDevice": "Поверніть пристрій горизонтально, щоб продовжити гру.",
     "yourTurn": "Ваш хід",
@@ -49,6 +53,10 @@
     "deckCount": "у колоді",
     "claimedMixed": "комбінація",
     "builtRoutes": "виконано маршрутів"
+  },
+  "errors": {
+    "enterNickname": "Введіть нік",
+    "selectRouteFirst": "Спочатку виберіть маршрут на мапі"
   },
   "cards": {
     "red": "червона",

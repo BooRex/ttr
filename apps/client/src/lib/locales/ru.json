@@ -12,6 +12,10 @@
     "noRooms": "Комнат пока нет.",
     "join": "Войти",
     "watch": "Смотреть",
+    "roomStarted": "Идёт игра",
+    "roomWaiting": "Ожидание",
+    "youShort": "вы",
+    "secondsShort": "с",
     "onlyLandscape": "Только landscape",
     "rotateDevice": "Поверните устройство горизонтально, чтобы продолжить игру.",
     "yourTurn": "Ваш ход",
@@ -49,6 +53,10 @@
     "deckCount": "в колоде",
     "claimedMixed": "комбинация",
     "builtRoutes": "выполнено маршрутов"
+  },
+  "errors": {
+    "enterNickname": "Введите ник",
+    "selectRouteFirst": "Сначала выберите маршрут на карте"
   },
   "cards": {
     "red": "красная",

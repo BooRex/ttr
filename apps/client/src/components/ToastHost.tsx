@@ -15,7 +15,7 @@ export const ToastHost = ({ toasts, onDismiss }: Props) => {
       {toasts.map((toast) => (
         <div key={toast.id} className={`toast ${toast.kind}`}>
           <span>{toast.message}</span>
-          <button onClick={() => onDismiss(toast.id)} aria-label="Закрыть уведомление">
+          <button onClick={() => onDismiss(toast.id)} aria-label="Dismiss notification">
             x
           </button>
         </div>
