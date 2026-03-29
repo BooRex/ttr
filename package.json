@@ -1,0 +1,19 @@
+{
+  "name": "ticket-to-ride-mvp",
+  "private": true,
+  "version": "0.1.0",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "npm run dev -w apps/server",
+    "dev:all": "concurrently \"npm run dev -w apps/server\" \"npm run dev -w apps/client\"",
+    "build": "npm run build -w packages/shared && npm run build -w apps/server && npm run build -w apps/client",
+    "test": "npm run test -w apps/server"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.0"
+  }
+}
+
