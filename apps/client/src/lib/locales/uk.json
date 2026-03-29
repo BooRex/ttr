@@ -58,6 +58,20 @@
     "enterNickname": "Введіть нік",
     "selectRouteFirst": "Спочатку виберіть маршрут на мапі"
   },
+  "results": {
+    "youWon": "Ви перемогли!",
+    "finalStandings": "Остаточна таблиця",
+    "place": "Місце",
+    "player": "Гравець",
+    "points": "Очки",
+    "destinations": "Маршути",
+    "you": "ви",
+    "gameStats": "Статистика гри",
+    "totalRoutes": "Захоплено маршрутів",
+    "roundsPlayed": "Карт взято",
+    "map": "Карта",
+    "backToLobby": "Повернутися в лобі"
+  },
   "cards": {
     "red": "червона",
     "blue": "синя",

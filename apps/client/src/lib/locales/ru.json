@@ -58,6 +58,20 @@
     "enterNickname": "Введите ник",
     "selectRouteFirst": "Сначала выберите маршрут на карте"
   },
+  "results": {
+    "youWon": "Вы выиграли!",
+    "finalStandings": "Итоговая таблица",
+    "place": "Место",
+    "player": "Игрок",
+    "points": "Очки",
+    "destinations": "Маршруты",
+    "you": "вы",
+    "gameStats": "Статистика игры",
+    "totalRoutes": "Захвачено маршрутов",
+    "roundsPlayed": "Карт взято",
+    "map": "Карта",
+    "backToLobby": "Вернуться в лобби"
+  },
   "cards": {
     "red": "красная",
     "blue": "синяя",

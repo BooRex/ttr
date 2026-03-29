@@ -58,6 +58,20 @@
     "enterNickname": "Nickname eingeben",
     "selectRouteFirst": "Wähle zuerst eine Strecke auf der Karte"
   },
+  "results": {
+    "youWon": "Du hast gewonnen!",
+    "finalStandings": "Endstand",
+    "place": "Platz",
+    "player": "Spieler",
+    "points": "Punkte",
+    "destinations": "Strecken",
+    "you": "du",
+    "gameStats": "Spielstatistiken",
+    "totalRoutes": "Beanspruchte Strecken",
+    "roundsPlayed": "Gezogene Karten",
+    "map": "Karte",
+    "backToLobby": "Zurück zur Lobby"
+  },
   "cards": {
     "red": "rot",
     "blue": "blau",

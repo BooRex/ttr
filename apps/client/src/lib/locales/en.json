@@ -58,6 +58,20 @@
     "enterNickname": "Enter nickname",
     "selectRouteFirst": "Select a route on the map first"
   },
+  "results": {
+    "youWon": "You won!",
+    "finalStandings": "Final standings",
+    "place": "Place",
+    "player": "Player",
+    "points": "Points",
+    "destinations": "Destinations",
+    "you": "you",
+    "gameStats": "Game statistics",
+    "totalRoutes": "Routes claimed",
+    "roundsPlayed": "Cards drawn",
+    "map": "Map",
+    "backToLobby": "Back to lobby"
+  },
   "cards": {
     "red": "red",
     "blue": "blue",
