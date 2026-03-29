@@ -6,8 +6,10 @@ import type { ClientToServerEvents, ServerToClientEvents } from "@ttr/shared";
 import { RoomService } from "./roomService.js";
 
 const PORT = Number(process.env.PORT ?? 3000);
+const corsOrigin = process.env.CORS_ORIGIN?.trim() || "*";
+const expressCorsOrigin = corsOrigin === "*" ? true : corsOrigin;
 const app = express();
-app.use(cors({ origin: true, credentials: true }));
+app.use(cors({ origin: expressCorsOrigin, credentials: true }));
 
 app.get("/health", (_req, res) => {
   res.json({ ok: true });
@@ -15,7 +17,7 @@ app.get("/health", (_req, res) => {
 
 const httpServer = createServer(app);
 const io = new Server<ClientToServerEvents, ServerToClientEvents>(httpServer, {
-  cors: { origin: "*" }
+  cors: { origin: corsOrigin }
 });
 
 const rooms = new RoomService((roomId, state) => {

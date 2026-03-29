@@ -1,0 +1,27 @@
+services:
+  - type: web
+    name: ttr-api
+    runtime: node
+    plan: free
+    rootDir: .
+    buildCommand: npm ci && npm run build -w packages/shared && npm run build -w apps/server
+    startCommand: npm run start -w apps/server
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: CORS_ORIGIN
+        value: https://ttr-client.onrender.com
+        sync: false
+
+  - type: static
+    name: ttr-client
+    plan: free
+    rootDir: .
+    buildCommand: npm ci && npm run build -w packages/shared && npm run build -w apps/client
+    publishPath: apps/client/dist
+    envVars:
+      - key: VITE_SERVER_URL
+        value: https://ttr-api.onrender.com
+        sync: false
+
