@@ -1,0 +1,13 @@
+{
+  "name": "city-calibrator",
+  "version": "1.0.0",
+  "description": "Interactive map calibration tool for city coordinates",
+  "type": "module",
+  "scripts": {
+    "dev": "node server.js",
+    "start": "node server.js"
+  },
+  "dependencies": {},
+  "devDependencies": {}
+}
+
