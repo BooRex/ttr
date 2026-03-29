@@ -1,8 +1,8 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import { v4 as uuidv4 } from "uuid";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { MAPS, type CardColor, type DestinationCard } from "@ttr/shared";
 import { socket } from "./socket";
 import { useAppStore } from "./store";
+import { useGameSession } from "./processes/game-session/useGameSession";
 import {
   buildConnectionHighlight,
   buildOwnedDestinationHighlight,
@@ -60,28 +60,22 @@ export const App = () => {
     typeof window !== "undefined" ? window.matchMedia("(orientation: portrait)").matches : false,
   );
 
-  // ── socket wiring ──────────────────────────────────────────────────────────
-  useEffect(() => {
-    if (!socket.connected) socket.connect();
+  const addToast = useCallback((kind: Toast["kind"], message: string) => {
+    const id = `${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+    setToasts((c) => [...c, { id, kind, message }]);
+    window.setTimeout(() => setToasts((c) => c.filter((t) => t.id !== id)), 4500);
+  }, []);
 
-    socket.on("room:list", setRooms);
-    socket.on("room:error", (msg) => { setError(msg); addToast("error", msg); });
-    socket.on("room:joined", (state) => { setGame(state); setRoomId(state.roomId); });
-    socket.on("game:state", setGame);
-    socket.on("reconnect:success", setGame);
-    socket.on("reconnect:fail", (msg) => { setError(msg); addToast("error", msg); });
-
-    socket.emit("room:list");
-    return () => { socket.removeAllListeners(); };
-  }, [setError, setGame, setRoomId, setRooms]);
-
-  useEffect(() => {
-    if (!sessionToken) setSessionToken(uuidv4());
-  }, [sessionToken, setSessionToken]);
-
-  useEffect(() => {
-    if (roomId && sessionToken) socket.emit("reconnect", { roomId, sessionToken });
-  }, [roomId, sessionToken]);
+  useGameSession({
+    roomId,
+    sessionToken,
+    setSessionToken,
+    setRooms,
+    setRoomId,
+    setGame,
+    setError,
+    addToast,
+  });
 
   useEffect(() => {
     const media = window.matchMedia("(orientation: portrait)");
@@ -158,12 +152,6 @@ export const App = () => {
     prevActiveTokenRef.current = activeToken;
   }, [activePlayer?.sessionToken, game?.finished, game?.started, sessionToken]);
 
-  // ── toasts ─────────────────────────────────────────────────────────────────
-  const addToast = (kind: Toast["kind"], message: string) => {
-    const id = `${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
-    setToasts((c) => [...c, { id, kind, message }]);
-    window.setTimeout(() => setToasts((c) => c.filter((t) => t.id !== id)), 4500);
-  };
 
   // ── destination choice cleanup ─────────────────────────────────────────────
   useEffect(() => {
