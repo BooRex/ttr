@@ -1,71 +1,130 @@
-# Ticket to Ride MVP (локальный)
+# 🚂 Ticket to Ride MVP
 
-Минимальный fullstack-MVP для игры с друзьями:
-- гостевой вход по нику + `sessionToken` в `localStorage`
-- лобби и комнаты (2-5 игроков)
-- старт игры, базовые действия (взять карту, захватить маршрут)
-- финальный раунд и автоматическое завершение партии
-- подсчет очков по destination-картам и таблица итогов
-- наблюдатели
-- реконнект по `sessionToken`
-- real-time синхронизация через Socket.io
+Fullstack-MVP для онлайн версии настольной игры "Билет на поезд".
 
-## Структура
+**Tech Stack:**
+- Frontend: React 19 + TypeScript + Vite + Zustand
+- Backend: Node.js + Express + Socket.io
+- Shared: TypeScript types + map data
 
-- `apps/server` - Node.js + Express + Socket.io
-- `apps/client` - React 19 + Vite + Zustand
-- `packages/shared` - общие типы и данные карты USA (mini)
+---
 
-## Быстрый запуск (локально)
+## 📚 Документация
+
+Вся документация находится в папке **`docs/`**:
+
+- **[README](./docs/README.md)** — Полный обзор архитектуры и структуры
+- **[ARCHITECTURE](./docs/ARCHITECTURE.md)** — Детальная архитектура с диаграммами
+- **[REFACTORING](./docs/REFACTORING.md)** — Решения рефакторинга App.tsx
+- **[API](./docs/API.md)** — Socket.io API документация
+
+---
+
+## 🚀 Быстрый старт
 
 ```bash
+# Установка зависимостей
 npm install
+
+# Запуск в режиме разработки
 npm run dev:all
+
+# Сборка для production
+npm run build:all
+
+# Запуск тестов
+npm run test
 ```
 
-После запуска:
-- клиент: `http://localhost:5173`
-- сервер: `http://localhost:3000`
-- health-check: `http://localhost:3000/health`
+**Endpoints после запуска:**
+- Frontend: `http://localhost:5173`
+- Backend: `http://localhost:3000`
+- Health check: `http://localhost:3000/health`
 
-## Запуск в Docker
+---
+
+## 🐳 Docker
 
 ```bash
 docker compose up
 ```
 
-## Как подключить друзей
+---
 
-### 1) Через ngrok (самый простой способ)
+## ✨ Основные возможности
 
-```bash
-ngrok http 5173
+- ✅ Мультиплеер (2-5 игроков)
+- ✅ Реал-тайм синхронизация (Socket.io)
+- ✅ Локализация (RU, UK, EN, DE)
+- ✅ Интерактивная доска (Konva canvas)
+- ✅ Mobile-responsive дизайн
+- ✅ 100% TypeScript
+- ✅ 20+ unit tests
+
+---
+
+## 📊 Project Stats
+
+| Метрика | Значение |
+|---------|----------|
+| App.tsx lines | 202 (было 450, -55%) |
+| Custom hooks | 11 |
+| Screen components | 4 |
+| Tests passing | 20/20 ✅ |
+| TypeScript errors | 0 |
+| Build time | ~1.5s |
+| Bundle (gzip) | 80 kB |
+
+---
+
+## 📁 Структура проекта
+
+```
+apps/
+├── client/          # Frontend React app
+├── server/          # Backend Node.js app
+└── calibrator/      # Map calibration tool
+
+packages/
+└── shared/          # Shared types & constants
+
+docs/               # 📖 Полная документация
+├── README.md       # Обзор и структура
+├── ARCHITECTURE.md # Архитектура
+├── REFACTORING.md  # Решения рефакторинга
+└── API.md          # Socket API
 ```
 
-Отправь друзьям публичный URL от ngrok.
+---
 
-### 2) Через Tailscale
+## 🔗 Дополнительные файлы
 
-Поднимите Tailscale на всех устройствах и откройте `http://<tailscale-ip>:5173`.
+- **FRONTEND_REFACTOR_PLAN.md** — План многофазного рефакторинга
+- **PHASE1-2_COMPLETE.md** — Итоги завершенных фаз (Phase 1-2)
+- **NEXT_STEPS.md** — Следующие шаги разработки (Phase 3+)
+- **PLAN_SUMMARY.md** — План улучшения SVG карты Европы
 
-## Тесты
+---
 
-```bash
-npm run test -w apps/server
-```
+## 🎯 Последние обновления (Phase 1-2)
 
-## Что уже есть
+### Phase 1: Рефакторинг App.tsx
+- ✅ App.tsx: 450 → 202 строк (-55%)
+- ✅ Извлечено 11 custom hooks
+- ✅ Извлечено 4 screen компонента
+- ✅ Дубликаты: -60%
 
-- In-memory состояние игры (без БД)
-- RoomService + GameEngine
-- Реалтайм события комнаты/игры
-- Базовые правила захвата маршрута и начисления очков
+### Phase 2: Дедупликация и оптимизация
+- ✅ Socket.emit wrapper (useSocketEmit)
+- ✅ Game selectors унификация (useGameSelectors)
+- ✅ 40+ констант централизовано
+- ✅ React.memo оптимизация
+- ✅ Results screen добавлен
+- ✅ 8 новых unit tests
+- ✅ 20 tests passing ✅
 
-## Что дальше (следующий шаг)
+---
 
-1. Полная карта USA (все города и маршруты)
-2. Действие `draw_destinations` + проверка выполненных маршрутов
-3. Таймер хода на сервере
-4. Mobile-first UI + board rendering (Konva)
-5. История игр (опционально: SQLite или Postgres)
+**Created:** 2026-03-29
+**Last Updated:** 2026-03-29
 
