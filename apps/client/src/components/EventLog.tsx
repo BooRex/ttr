@@ -1,6 +1,7 @@
 import type { GameEvent } from "@ttr/shared";
 import { PLAYER_COLORS } from "../lib/colors";
-import { cardLabel, t, type Lang } from "../lib/i18n";
+import { t, type Lang } from "../lib/i18n";
+import { toEventViewModel } from "../features/event-log/model/formatters";
 import { CardChip } from "./CardChip";
 import { DestinationBadge } from "./DestinationBadge";
 
@@ -23,85 +24,62 @@ const PlayerName = ({ sessionToken, nickname, players }: { sessionToken: string;
 
 export const EventLog = ({ events, lang, players, limit, onHoverConnection, onLeaveConnection }: Props) => {
   const items = limit ? events.slice(0, limit) : events;
+  const models = items.map((event) => toEventViewModel(lang, event));
 
   return (
     <ol className="event-log-rich">
-      {items.map((event) => {
-        if (event.type === "game_started") {
-          return <li key={event.id} className="event-entry">🎲 {t(lang, "events.gameStarted")}</li>;
+      {models.map((model) => {
+        if (!model.player && !model.winner) {
+          return <li key={model.id} className="event-entry">{model.icon} {model.message}</li>;
         }
 
-        if (event.type === "draw_card") {
+        if (model.cardColor) {
           return (
-            <li key={event.id} className="event-entry event-entry-inline">
-              <PlayerName sessionToken={event.sessionToken} nickname={event.nickname} players={players} />
-              <span>{t(lang, "events.drawCard")}</span>
-              <CardChip color={event.cardColor} size="sm" />
-              <span className="event-muted">({cardLabel(lang, event.cardColor)})</span>
+            <li key={model.id} className="event-entry event-entry-inline">
+              <span>{model.icon}</span>
+              <PlayerName sessionToken={model.player?.sessionToken ?? ""} nickname={model.player?.nickname ?? ""} players={players} />
+              <span>{model.message}</span>
+              <CardChip color={model.cardColor} size="sm" />
+              <span className="event-muted">({model.cardColorLabel})</span>
             </li>
           );
         }
 
-        if (event.type === "draw_destinations") {
+        if (model.route) {
           return (
-            <li key={event.id} className="event-entry event-entry-inline">
-              <PlayerName sessionToken={event.sessionToken} nickname={event.nickname} players={players} />
-              <span>{t(lang, "events.drawDestinations")}</span>
-            </li>
-          );
-        }
-
-        if (event.type === "choose_destinations") {
-          return (
-            <li key={event.id} className="event-entry event-entry-inline">
-              <PlayerName sessionToken={event.sessionToken} nickname={event.nickname} players={players} />
-              <span>{t(lang, "events.chooseDestinations", { count: event.keepCount })}</span>
-            </li>
-          );
-        }
-
-        if (event.type === "claim_route") {
-          return (
-            <li key={event.id} className="event-entry event-entry-inline">
-              <PlayerName sessionToken={event.sessionToken} nickname={event.nickname} players={players} />
-              <span>{t(lang, "events.claimRoute")}</span>
+            <li key={model.id} className="event-entry event-entry-inline">
+              <span>{model.icon}</span>
+              <PlayerName sessionToken={model.player?.sessionToken ?? ""} nickname={model.player?.nickname ?? ""} players={players} />
+              <span>{model.message}</span>
               <DestinationBadge
                 lang={lang}
                 compact
                 hidePoints
-                card={{ from: event.from, to: event.to }}
-                onMouseEnter={onHoverConnection ? () => onHoverConnection(event.from, event.to) : undefined}
+                card={{ from: model.route.from, to: model.route.to }}
+                onMouseEnter={onHoverConnection ? () => onHoverConnection(model.route!.from, model.route!.to) : undefined}
                 onMouseLeave={onLeaveConnection}
               />
             </li>
           );
         }
 
-        if (event.type === "final_round") {
+        if (model.player) {
           return (
-            <li key={event.id} className="event-entry event-entry-inline">
-              <PlayerName sessionToken={event.sessionToken} nickname={event.nickname} players={players} />
-              <span>{t(lang, "events.finalRound", { wagonsLeft: event.wagonsLeft })}</span>
-            </li>
-          );
-        }
-
-        if (event.type === "turn_skipped") {
-          return (
-            <li key={event.id} className="event-entry event-entry-inline">
-              <PlayerName sessionToken={event.sessionToken} nickname={event.nickname} players={players} />
-              <span>{t(lang, "events.turnSkipped", { reason: event.reason })}</span>
+            <li key={model.id} className="event-entry event-entry-inline">
+              <span>{model.icon}</span>
+              <PlayerName sessionToken={model.player.sessionToken} nickname={model.player.nickname} players={players} />
+              <span>{model.message}</span>
             </li>
           );
         }
 
         return (
-          <li key={event.id} className="event-entry event-entry-inline">
-            <span>🏁 {t(lang, "events.gameFinished")}</span>
-            {event.winnerNickname && (
+          <li key={model.id} className="event-entry event-entry-inline">
+            <span>{model.icon} {model.message}</span>
+            {model.winner && (
               <span>
-                · {t(lang, "events.winner")}: <PlayerName sessionToken={event.winnerSessionToken ?? ""} nickname={event.winnerNickname} players={players} />
-                {typeof event.winnerPoints === "number" ? ` (${event.winnerPoints})` : ""}
+                · {t(lang, "events.winner")}: <PlayerName sessionToken={model.winner.sessionToken ?? ""} nickname={model.winner.nickname} players={players} />
+                {typeof model.winner.points === "number" ? ` (${model.winner.points})` : ""}
               </span>
             )}
           </li>
