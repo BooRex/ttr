@@ -14,11 +14,11 @@ import {
   selectWinner,
   type RouteHighlight,
 } from "./entities/game/model";
-import { BoardCanvas } from "./components/BoardCanvas";
-import { HandCards } from "./components/HandCards";
 import { ActionPanel, type ClaimOpt } from "./components/ActionPanel";
-import { DestinationBadge } from "./components/DestinationBadge";
 import { EventLog } from "./components/EventLog";
+import { GameTopbar } from "./widgets/game-topbar";
+import { GameBoardSlot } from "./widgets/game-board";
+import { GameRightPanel } from "./widgets/game-right-panel";
 import { ToastHost } from "./components/ToastHost";
 import { PLAYER_COLORS } from "./lib/colors";
 import { defaultLang, getInitialLang, setLangStorage, t, type Lang } from "./lib/i18n";
@@ -349,62 +349,17 @@ export const App = () => {
           )}
 
           {/* Header bar */}
-          <div className="game-topbar">
-            <span className="room-badge">{game.roomId}</span>
-            {activePlayer && !game.finished && (
-              <span className={["text-xs inline-flex items-center gap-1.5", turnPulse ? "turn-pulse text-green-300" : "text-slate-300"].join(" ")}>
-                <span className="w-2.5 h-2.5 rounded-full" style={{ background: PLAYER_COLORS[game.activePlayerIndex] }} />
-                {isMyTurn ? t(lang, "ui.yourTurn") : t(lang, "ui.waiting")}
-              </span>
-            )}
-
-            <div className="players-strip ml-auto">
-              {game.players.map((player, idx) => {
-                const color = PLAYER_COLORS[idx];
-                const isActive = idx === game.activePlayerIndex && !game.finished;
-                const isMe = player.sessionToken === sessionToken;
-                const isHighlighted = highlightOwnerSessionToken === player.sessionToken;
-                return (
-                  <button
-                    key={player.sessionToken}
-                    className={["player-pill", isActive ? "active" : "", isHighlighted ? "highlighted" : ""].join(" ")}
-                    onMouseEnter={() => setHighlightOwnerSessionToken(player.sessionToken)}
-                    onMouseLeave={() => setHighlightOwnerSessionToken(null)}
-                    onClick={() => setHighlightOwnerSessionToken((c) => c === player.sessionToken ? null : player.sessionToken)}
-                    title={player.nickname}
-                  >
-                    <div
-                      className={[
-                        "player-avatar",
-                        "w-7 h-7 rounded-full border-2 flex items-center justify-center",
-                        "text-[11px] font-black select-none transition-transform",
-                        isActive ? "scale-110" : "opacity-85",
-                      ].join(" ")}
-                      style={{
-                        background: color,
-                        borderColor: isActive ? "rgba(255,255,255,0.8)" : `${color}60`,
-                        boxShadow: isActive ? `0 0 10px ${color}, 0 0 20px ${color}55` : "none",
-                        color: idx === 3 ? "#111827" : "#fff",
-                      }}
-                    >
-                      {isMe ? "★" : String(idx + 1)}
-                    </div>
-                    <span className="player-pill-meta">
-                      {player.points}{t(lang, "ui.pointsShort")} · {player.wagonsLeft}🚃 · {player.hand.length}🃏
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-
-            <label className="lang-select-wrap">
-              <select value={lang} onChange={(e) => setLang(e.target.value as Lang)}>
-                {(["ru", "uk", "en", "de"] as Lang[]).map((code) => (
-                  <option key={code} value={code}>{t(lang, `lang.${code}`)}</option>
-                ))}
-              </select>
-            </label>
-          </div>
+          <GameTopbar
+            game={game}
+            lang={lang}
+            isMyTurn={isMyTurn}
+            turnPulse={turnPulse}
+            sessionToken={sessionToken}
+            highlightOwnerSessionToken={highlightOwnerSessionToken}
+            onHoverOwner={setHighlightOwnerSessionToken}
+            onToggleOwner={(token) => setHighlightOwnerSessionToken((c) => c === token ? null : token)}
+            onSetLang={setLang}
+          />
 
           <div className="game-layout">
             <aside className="game-side side-left">
@@ -438,74 +393,29 @@ export const App = () => {
               </div>
             </aside>
 
-            <div className="board-slot">
-              <div className="board-square">
-                <BoardCanvas
-                  mapId={game.mapId}
-                  lang={lang}
-                  routes={game.routes}
-                  players={game.players}
-                  selectedRouteId={selectedRouteId}
-                  highlightOwnerSessionToken={highlightOwnerSessionToken}
-                  highlightRouteIds={boardHighlight.routeIds}
-                  highlightCityNames={boardHighlight.cityNames}
-                  onSelectRoute={setSelectedRouteId}
-                />
-              </div>
-            </div>
+            <GameBoardSlot
+              mapId={game.mapId}
+              lang={lang}
+              routes={game.routes}
+              players={game.players}
+              selectedRouteId={selectedRouteId}
+              highlightOwnerSessionToken={highlightOwnerSessionToken}
+              highlightRouteIds={boardHighlight.routeIds}
+              highlightCityNames={boardHighlight.cityNames}
+              onSelectRoute={setSelectedRouteId}
+            />
 
-            <aside className="game-side side-right">
-              {me && !me.isSpectator && (
-                <div className="player-hand card side-card right-half">
-                  <div className="row" style={{ justifyContent: "space-between" }}>
-                    <strong>{t(lang, "ui.yourCards")}</strong>
-                    <span className="hint">{me.wagonsLeft} {t(lang, "ui.wagons")} · {me.points} {t(lang, "ui.pointsShort")}</span>
-                  </div>
-                  <HandCards cards={me.hand} compact />
-                  {me.destinations.length > 0 && (
-                    <div className="my-destinations">
-                      {me.destinations.map((d) => (
-                        <DestinationBadge
-                          key={d.id}
-                          card={d}
-                          lang={lang}
-                          onMouseEnter={() => setHoveredDestination(d)}
-                          onMouseLeave={() => setHoveredDestination(null)}
-                        />
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
-
-              <div className="scoreboard card side-card desktop-events right-half">
-                <h3>{t(lang, "ui.events")}</h3>
-                <EventLog
-                  events={game.events ?? []}
-                  players={game.players}
-                  lang={lang}
-                  limit={20}
-                  onHoverConnection={(from, to) => setHoveredConnection({ from, to })}
-                  onLeaveConnection={() => setHoveredConnection(null)}
-                />
-              </div>
-
-              {game.finished && (
-                <div className="game-over card side-card">
-                  <h2>🏁 {t(lang, "ui.gameOver")}</h2>
-                  {winner && <p className="winner">🥇 {t(lang, "ui.winner")}: {winner.nickname}</p>}
-                  <ol className="standings">
-                    {game.finalStandings.map((s, i) => (
-                      <li key={s.sessionToken}>
-                        {i + 1}. {s.nickname} — {s.points} {t(lang, "ui.pointsShort")}
-                        · {t(lang, "ui.builtRoutes")}: {s.completedDestinations}
-                      </li>
-                    ))}
-                  </ol>
-                  <button onClick={() => { setRoomId(""); setGame({ ...game }); }}>← {t(lang, "ui.toLobby")}</button>
-                </div>
-              )}
-            </aside>
+            <GameRightPanel
+              game={game}
+              me={me}
+              winner={winner}
+              lang={lang}
+              onHoverDestination={setHoveredDestination}
+              onLeaveDestination={() => setHoveredDestination(null)}
+              onHoverConnection={(from, to) => setHoveredConnection({ from, to })}
+              onLeaveConnection={() => setHoveredConnection(null)}
+              onBackToLobby={() => { setRoomId(""); setGame({ ...game }); }}
+            />
           </div>
 
           <button className="events-fab" onClick={() => setIsEventsOpen(true)}>
