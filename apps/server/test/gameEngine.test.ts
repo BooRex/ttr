@@ -36,6 +36,27 @@ describe("GameEngine", () => {
     const handBefore = state.players[0]?.hand.length ?? 0;
     engine.drawCard(state, "a");
     expect(state.players[0]?.hand.length).toBe(handBefore + 1);
+    expect(state.activePlayerIndex).toBe(0);
+    engine.drawCard(state, "a");
+    expect(state.activePlayerIndex).toBe(1);
+  });
+
+  it("завершает ход после добора открытой карты рынка", () => {
+    const engine = new GameEngine();
+    const state = engine.initGame(
+      "ROOM_OPEN_DRAW",
+      [
+        { sessionToken: "a", nickname: "A", wagonsLeft: 45, hand: [], destinations: [], points: 0 },
+        { sessionToken: "b", nickname: "B", wagonsLeft: 45, hand: [], destinations: [], points: 0 }
+      ],
+      "usa",
+      { maxPlayers: 5, turnTimerSeconds: null }
+    );
+
+    const handBefore = state.players[0]?.hand.length ?? 0;
+    engine.drawCard(state, "a", 0);
+
+    expect(state.players[0]?.hand.length).toBe(handBefore + 1);
     expect(state.activePlayerIndex).toBe(1);
   });
 
@@ -82,6 +103,41 @@ describe("GameEngine", () => {
     expect(() => engine.claimRoute(state, "a", "r1", "red")).toThrow("Сначала выберите карты маршрутов");
   });
 
+  it("блокирует смену типа действия после первого добора карты", () => {
+    const engine = new GameEngine();
+    const state = engine.initGame(
+      "ROOM_DRAW_LOCK",
+      [
+        { sessionToken: "a", nickname: "A", wagonsLeft: 45, hand: [], destinations: [], points: 0 },
+        { sessionToken: "b", nickname: "B", wagonsLeft: 45, hand: [], destinations: [], points: 0 }
+      ],
+      "usa",
+      { maxPlayers: 5, turnTimerSeconds: null }
+    );
+
+    engine.drawCard(state, "a");
+
+    expect(() => engine.drawDestinations(state, "a")).toThrow("В этом ходу уже выбрано другое действие");
+    expect(() => engine.claimRoute(state, "a", "r1", "red")).toThrow("В этом ходу уже выбрано другое действие");
+  });
+
+  it("не позволяет брать открытую карту вторым добором после колоды", () => {
+    const engine = new GameEngine();
+    const state = engine.initGame(
+      "ROOM_DRAW_OPEN_SECOND",
+      [
+        { sessionToken: "a", nickname: "A", wagonsLeft: 45, hand: [], destinations: [], points: 0 },
+        { sessionToken: "b", nickname: "B", wagonsLeft: 45, hand: [], destinations: [], points: 0 }
+      ],
+      "usa",
+      { maxPlayers: 5, turnTimerSeconds: null }
+    );
+
+    engine.drawCard(state, "a");
+
+    expect(() => engine.drawCard(state, "a", 0)).toThrow("Открытую карту можно взять только как первое и единственное действие добора");
+  });
+
   it("завершает игру в финальном раунде и считает destination-очки", () => {
     const engine = new GameEngine();
     const state = engine.initGame(
@@ -107,6 +163,7 @@ describe("GameEngine", () => {
     state.lastRoundEndIndex = 0;
     state.activePlayerIndex = 1;
 
+    engine.drawCard(state, "b");
     engine.drawCard(state, "b");
 
     expect(state.finished).toBe(true);

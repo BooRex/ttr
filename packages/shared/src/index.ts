@@ -42,7 +42,7 @@ export type Route = {
 
 export type GameEvent =
   | { id: string; type: "game_started" }
-  | { id: string; type: "draw_card"; sessionToken: string; nickname: string; cardColor: CardColor }
+  | { id: string; type: "draw_card"; sessionToken: string; nickname: string }
   | { id: string; type: "draw_destinations"; sessionToken: string; nickname: string }
   | { id: string; type: "choose_destinations"; sessionToken: string; nickname: string; keepCount: number }
   | { id: string; type: "claim_route"; sessionToken: string; nickname: string; routeId: string; from: string; to: string }
@@ -73,6 +73,11 @@ export type GameSettings = {
 };
 
 export type TurnAction = "draw_cards" | "draw_destinations" | "claim_route";
+
+export type TurnActionState = {
+  action: TurnAction | null;
+  drawCardsTaken: number;
+};
 
 export type PendingDestinationChoice = {
   sessionToken: string;
@@ -108,6 +113,7 @@ export type GameState = {
   log: string[];
   events: GameEvent[];
   settings: GameSettings;
+  turnActionState: TurnActionState;
 };
 
 export type RoomSummary = {

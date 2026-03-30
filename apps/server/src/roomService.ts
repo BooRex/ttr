@@ -131,7 +131,7 @@ export class RoomService {
     const inPlayers = room.state.players.some((p) => p.sessionToken === sessionToken);
     const inSpectators = room.state.spectators.some((p) => p.sessionToken === sessionToken);
     if (!inPlayers && !inSpectators) throw new Error("Сессия не найдена");
-    return room.state;
+    return this.maskStateForViewer(room.state, sessionToken);
   }
 
   drawCard(roomId: string, sessionToken: string, openIndex?: number): GameState {
@@ -176,6 +176,33 @@ export class RoomService {
     const room = this.rooms.get(roomId);
     if (!room?.state) throw new Error("Игра не запущена");
     return room.state;
+  }
+
+  getStateForViewer(roomId: string, sessionToken: string): GameState {
+    const room = this.rooms.get(roomId);
+    if (!room?.state) throw new Error("Игра не запущена");
+    return this.maskStateForViewer(room.state, sessionToken);
+  }
+
+  private maskStateForViewer(state: GameState, sessionToken: string): GameState {
+    const masked = structuredClone(state);
+    masked.players = masked.players.map((player) => {
+      if (player.sessionToken === sessionToken) return player;
+      return {
+        ...player,
+        // Preserve hand size for UI stats, but hide exact colors.
+        hand: player.hand.map(() => ({ color: "locomotive" as const })),
+      };
+    });
+
+    if (masked.pendingDestinationChoice && masked.pendingDestinationChoice.sessionToken !== sessionToken) {
+      masked.pendingDestinationChoice = {
+        ...masked.pendingDestinationChoice,
+        cards: [],
+      };
+    }
+
+    return masked;
   }
 
   private scheduleTurnTimer(room: Room): void {

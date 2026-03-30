@@ -194,6 +194,7 @@ export const ActionPanel = ({
   const routeClaimOpts = selectedRoute
     ? buildClaimOptions(hand, selectedRoute.color, selectedRoute.length)
     : [];
+  const drawInProgress = game.turnActionState.action === "draw_cards";
 
   // Keep selection valid when user switches route; defaults to first valid option.
   useEffect(() => {
@@ -301,7 +302,7 @@ export const ActionPanel = ({
     const claimOpts = selectedRoute.ownerSessionToken ? [] : routeClaimOpts;
 
     const selectedOpt = claimOpts.find(o => o.baseColor === selectedColor) ?? null;
-    const canClaim = selectedOpt !== null && !selectedRoute.ownerSessionToken;
+    const canClaim = selectedOpt !== null && !selectedRoute.ownerSessionToken && !drawInProgress;
 
     return (
       <div className="bg-slate-900 border-2 border-slate-600 rounded-2xl p-4 space-y-4">
@@ -394,6 +395,7 @@ export const ActionPanel = ({
               key={i}
               color={card.color as CardColor}
               size="md"
+              disabled={drawInProgress}
               onClick={() => onDrawCard(i)}
             />
           ))}
@@ -426,7 +428,7 @@ export const ActionPanel = ({
           label={t(lang, "ui.routes")}
           sub={`${game.destinationDeckCount} ${t(lang, "ui.deckCount")}`}
           onClick={onDrawDestinations}
-          disabled={game.destinationDeckCount === 0}
+          disabled={game.destinationDeckCount === 0 || drawInProgress}
         />
         <BigActionBtn
           icon="🚂"

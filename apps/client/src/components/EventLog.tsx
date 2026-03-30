@@ -2,7 +2,6 @@ import type { GameEvent } from "@ttr/shared";
 import { PLAYER_COLORS } from "../lib/colors";
 import { t, type Lang } from "../lib/i18n";
 import { toEventViewModel } from "../features/event-log/model/formatters";
-import { CardChip } from "./CardChip";
 import { DestinationBadge } from "./DestinationBadge";
 
 type PlayerMeta = { sessionToken: string; nickname: string };
@@ -33,17 +32,6 @@ export const EventLog = ({ events, lang, players, limit, onHoverConnection, onLe
           return <li key={model.id} className="event-entry">{model.icon} {model.message}</li>;
         }
 
-        if (model.cardColor) {
-          return (
-            <li key={model.id} className="event-entry event-entry-inline">
-              <span>{model.icon}</span>
-              <PlayerName sessionToken={model.player?.sessionToken ?? ""} nickname={model.player?.nickname ?? ""} players={players} />
-              <span>{model.message}</span>
-              <CardChip color={model.cardColor} size="sm" />
-              <span className="event-muted">({model.cardColorLabel})</span>
-            </li>
-          );
-        }
 
         if (model.route) {
           return (

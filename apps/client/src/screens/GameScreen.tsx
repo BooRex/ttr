@@ -178,13 +178,15 @@ const GameScreenComponent = ({
             <h3>{t(lang, "ui.events")}</h3>
             <button onClick={onToggleEvents}>{t(lang, "ui.close")}</button>
           </div>
-          <EventLog
-            events={game.events ?? []}
-            players={game.players}
-            lang={lang}
-            onHoverConnection={onHoverConnection}
-            onLeaveConnection={onLeaveConnection}
-          />
+          <div className="events-scroll-area">
+            <EventLog
+              events={game.events ?? []}
+              players={game.players}
+              lang={lang}
+              onHoverConnection={onHoverConnection}
+              onLeaveConnection={onLeaveConnection}
+            />
+          </div>
         </div>
       )}
     </div>

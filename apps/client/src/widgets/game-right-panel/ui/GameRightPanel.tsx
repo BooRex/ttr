@@ -54,14 +54,15 @@ export const GameRightPanel = ({
 
       <div className="scoreboard card side-card desktop-events right-half">
         <h3>{t(lang, "ui.events")}</h3>
-        <EventLog
-          events={game.events ?? []}
-          players={game.players}
-          lang={lang}
-          limit={20}
-          onHoverConnection={onHoverConnection}
-          onLeaveConnection={onLeaveConnection}
-        />
+        <div className="events-scroll-area">
+          <EventLog
+            events={game.events ?? []}
+            players={game.players}
+            lang={lang}
+            onHoverConnection={onHoverConnection}
+            onLeaveConnection={onLeaveConnection}
+          />
+        </div>
       </div>
 
       {game.finished && (

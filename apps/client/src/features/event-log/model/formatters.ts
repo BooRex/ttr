@@ -1,13 +1,11 @@
-import type { CardColor, GameEvent } from "@ttr/shared";
-import { cardLabel, t, type Lang } from "../../../lib/i18n";
+import type { GameEvent } from "@ttr/shared";
+import { t, type Lang } from "../../../lib/i18n";
 
 export type EventViewModel = {
   id: string;
   icon: string;
   message: string;
   player?: { sessionToken: string; nickname: string };
-  cardColor?: CardColor;
-  cardColorLabel?: string;
   route?: { from: string; to: string };
   winner?: { sessionToken: string | null; nickname: string; points: number | null };
 };
@@ -27,8 +25,6 @@ export const toEventViewModel = (lang: Lang, event: GameEvent): EventViewModel =
       icon: "🃏",
       player: { sessionToken: event.sessionToken, nickname: event.nickname },
       message: t(lang, "events.drawCard"),
-      cardColor: event.cardColor,
-      cardColorLabel: cardLabel(lang, event.cardColor),
     };
   }
 

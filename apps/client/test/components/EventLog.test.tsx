@@ -23,7 +23,6 @@ const events: GameEvent[] = [
     type: "draw_card",
     sessionToken: "p2",
     nickname: "Bob",
-    cardColor: "red",
   },
 ];
 

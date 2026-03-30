@@ -56,7 +56,7 @@ export const App = () => {
   // ── Game state selectors (мемоизированы)  ─────────────────────────────────
   const gameSelectors = useGameSelectors(game, sessionToken);
 
-  const activePlayer = game?.players[0] ?? null;
+  const activePlayer = game?.players[game.activePlayerIndex] ?? null;
   const { turnPulse } = useTurnPulse(activePlayer?.sessionToken, sessionToken);
   const { createRoom, joinRoom } = useLobbyLogic({ nickname, sessionToken });
   const gameLogic = useGameLogic({ game, roomId, sessionToken });
@@ -80,6 +80,15 @@ export const App = () => {
   // ── Screen routing ─────────────────────────────────────────────────────────
   const inRoom = Boolean(game);
   const gameStarted = game?.started ?? false;
+
+  useEffect(() => {
+    if (!gameStarted) return;
+    const baseUrl = ((import.meta.env.VITE_SERVER_URL as string | undefined) ?? "http://localhost:3000").replace(/\/$/, "");
+    const timerId = window.setInterval(() => {
+      void fetch(`${baseUrl}/health`).catch(() => undefined);
+    }, 4 * 60 * 1000);
+    return () => window.clearInterval(timerId);
+  }, [gameStarted]);
 
   const handleExitGame = () => {
     setRoomId("");

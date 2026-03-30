@@ -7,16 +7,14 @@ const drawCardEvent: GameEvent = {
   type: "draw_card",
   sessionToken: "p1",
   nickname: "Alice",
-  cardColor: "orange",
 };
 
 describe("event-log formatters", () => {
-  it("formats draw_card with card label", () => {
+  it("formats draw_card without revealing card color", () => {
     const vm = toEventViewModel("ru", drawCardEvent);
     expect(vm.icon).toBe("🃏");
     expect(vm.player?.nickname).toBe("Alice");
-    expect(vm.cardColor).toBe("orange");
-    expect(vm.cardColorLabel).toBe("оранжевая");
+    expect(vm.message).toContain("карту");
   });
 
   it("formats claim_route with route payload", () => {

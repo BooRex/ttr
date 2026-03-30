@@ -140,6 +140,8 @@ export class GameEngine {
       settings,
       log: ["Игра началась"],
       events: [{ id: eventId(), type: "game_started" }]
+      ,
+      turnActionState: { action: null, drawCardsTaken: 0 }
     };
   }
 
@@ -151,6 +153,16 @@ export class GameEngine {
     if (!activePlayer || activePlayer.sessionToken !== playerToken) {
       throw new Error("Сейчас не ваш ход");
     }
+    if (state.turnActionState.action && state.turnActionState.action !== "draw_cards") {
+      throw new Error("В этом ходу уже выбрано другое действие");
+    }
+    if (state.turnActionState.drawCardsTaken >= 2) {
+      throw new Error("В этом ходу уже взяты 2 карты");
+    }
+    if (typeof openIndex === "number" && state.turnActionState.drawCardsTaken > 0) {
+      throw new Error("Открытую карту можно взять только как первое и единственное действие добора");
+    }
+    state.turnActionState.action = "draw_cards";
 
     let card: TrainCard | null;
     if (typeof openIndex === "number") {
@@ -166,9 +178,13 @@ export class GameEngine {
     if (!card) throw new Error("Колода пуста");
 
     activePlayer.hand.push(card);
-    state.log.unshift(`${activePlayer.nickname} берет карту ${card.color}`);
-    pushEvent(state, { id: eventId(), type: "draw_card", sessionToken: activePlayer.sessionToken, nickname: activePlayer.nickname, cardColor: card.color });
-    this.finishTurnAndMaybeEndGame(state);
+    state.log.unshift(`${activePlayer.nickname} берет карту`);
+    pushEvent(state, { id: eventId(), type: "draw_card", sessionToken: activePlayer.sessionToken, nickname: activePlayer.nickname });
+    state.turnActionState.drawCardsTaken += 1;
+    const shouldEndTurn = typeof openIndex === "number" || state.turnActionState.drawCardsTaken >= 2;
+    if (shouldEndTurn) {
+      this.finishTurnAndMaybeEndGame(state);
+    }
     this.syncDeckCounts(state);
     return state;
   }
@@ -181,6 +197,10 @@ export class GameEngine {
     if (!activePlayer || activePlayer.sessionToken !== playerToken) {
       throw new Error("Сейчас не ваш ход");
     }
+    if (state.turnActionState.action) {
+      throw new Error("В этом ходу уже выбрано другое действие");
+    }
+    state.turnActionState.action = "draw_destinations";
 
     const cards = [this.destinationDeck.pop(), this.destinationDeck.pop(), this.destinationDeck.pop()].filter(Boolean) as DestinationCard[];
     if (cards.length === 0) throw new Error("Колода маршрутов пуста");
@@ -240,6 +260,10 @@ export class GameEngine {
     if (!activePlayer || activePlayer.sessionToken !== playerToken) {
       throw new Error("Сейчас не ваш ход");
     }
+    if (state.turnActionState.action) {
+      throw new Error("В этом ходу уже выбрано другое действие");
+    }
+    state.turnActionState.action = "claim_route";
 
     const route = state.routes.find((r) => r.id === routeId);
     if (!route) throw new Error("Маршрут не найден");
@@ -354,6 +378,7 @@ export class GameEngine {
 
   private finishTurnAndMaybeEndGame(state: GameState): void {
     this.advanceTurn(state);
+    state.turnActionState = { action: null, drawCardsTaken: 0 };
     if (state.lastRoundTriggered && state.lastRoundEndIndex !== null && state.activePlayerIndex === state.lastRoundEndIndex) {
       this.finalizeGame(state);
     }

@@ -20,8 +20,23 @@ const io = new Server<ClientToServerEvents, ServerToClientEvents>(httpServer, {
   cors: { origin: corsOrigin }
 });
 
-const rooms = new RoomService((roomId, state) => {
-  io.to(roomId).emit("game:state", state);
+const emitStateForRoom = (roomId: string): void => {
+  void io.in(roomId).fetchSockets().then((sockets) => {
+    for (const clientSocket of sockets) {
+      const token = clientSocket.data?.sessionToken as string | undefined;
+      if (!token) continue;
+      try {
+        const state = rooms.getStateForViewer(roomId, token);
+        clientSocket.emit("game:state", state);
+      } catch {
+        // Ignore stale sockets for deleted/unfinished rooms.
+      }
+    }
+  });
+};
+
+const rooms = new RoomService((roomId) => {
+  emitStateForRoom(roomId);
 });
 
 io.on("connection", (socket) => {
@@ -32,6 +47,7 @@ io.on("connection", (socket) => {
   socket.on("room:create", (payload) => {
     try {
       const room = rooms.create(payload);
+      socket.data.sessionToken = payload.sessionToken;
       socket.join(room.roomId);
       socket.emit("room:joined", {
         roomId: room.roomId,
@@ -53,7 +69,8 @@ io.on("connection", (socket) => {
         finalStandings: [],
         log: ["Комната создана"],
         events: [],
-        settings: { maxPlayers: room.maxPlayers, turnTimerSeconds: room.timerSeconds }
+        settings: { maxPlayers: room.maxPlayers, turnTimerSeconds: room.timerSeconds },
+        turnActionState: { action: null, drawCardsTaken: 0 }
       });
       io.emit("room:list", rooms.list());
     } catch (error) {
@@ -64,8 +81,9 @@ io.on("connection", (socket) => {
   socket.on("room:join", (payload) => {
     try {
       const room = rooms.join(payload);
+      socket.data.sessionToken = payload.sessionToken;
       socket.join(room.roomId);
-      const state = room.state ?? {
+      const state = room.state ? rooms.getStateForViewer(room.roomId, payload.sessionToken) : {
         roomId: room.roomId,
         mapId: room.mapId,
         started: room.started,
@@ -85,9 +103,10 @@ io.on("connection", (socket) => {
         finalStandings: [],
         log: ["Ожидание старта"],
         events: [],
-        settings: { maxPlayers: room.maxPlayers, turnTimerSeconds: room.timerSeconds }
+        settings: { maxPlayers: room.maxPlayers, turnTimerSeconds: room.timerSeconds },
+        turnActionState: { action: null, drawCardsTaken: 0 }
       };
-      io.to(room.roomId).emit("game:state", state);
+      emitStateForRoom(room.roomId);
       socket.emit("room:joined", state);
       io.emit("room:list", rooms.list());
     } catch (error) {
@@ -99,7 +118,7 @@ io.on("connection", (socket) => {
     try {
       const room = rooms.start(payload.roomId, payload.sessionToken);
       if (!room.state) throw new Error("Не удалось запустить игру");
-      io.to(room.roomId).emit("game:state", room.state);
+      emitStateForRoom(room.roomId);
       io.emit("room:list", rooms.list());
     } catch (error) {
       socket.emit("room:error", (error as Error).message);
@@ -108,8 +127,8 @@ io.on("connection", (socket) => {
 
   socket.on("game:draw-card", (payload) => {
     try {
-      const state = rooms.drawCard(payload.roomId, payload.sessionToken, payload.fromOpenIndex);
-      io.to(payload.roomId).emit("game:state", state);
+      rooms.drawCard(payload.roomId, payload.sessionToken, payload.fromOpenIndex);
+      emitStateForRoom(payload.roomId);
     } catch (error) {
       socket.emit("room:error", (error as Error).message);
     }
@@ -117,14 +136,14 @@ io.on("connection", (socket) => {
 
   socket.on("game:claim-route", (payload) => {
     try {
-      const state = rooms.claimRoute(
+      rooms.claimRoute(
         payload.roomId,
         payload.sessionToken,
         payload.routeId,
         payload.color,
         payload.useLocomotives,
       );
-      io.to(payload.roomId).emit("game:state", state);
+      emitStateForRoom(payload.roomId);
     } catch (error) {
       socket.emit("room:error", (error as Error).message);
     }
@@ -132,8 +151,8 @@ io.on("connection", (socket) => {
 
   socket.on("game:draw-destinations", (payload) => {
     try {
-      const state = rooms.drawDestinations(payload.roomId, payload.sessionToken);
-      io.to(payload.roomId).emit("game:state", state);
+      rooms.drawDestinations(payload.roomId, payload.sessionToken);
+      emitStateForRoom(payload.roomId);
     } catch (error) {
       socket.emit("room:error", (error as Error).message);
     }
@@ -141,8 +160,8 @@ io.on("connection", (socket) => {
 
   socket.on("game:choose-destinations", (payload) => {
     try {
-      const state = rooms.chooseDestinations(payload.roomId, payload.sessionToken, payload.keepIds);
-      io.to(payload.roomId).emit("game:state", state);
+      rooms.chooseDestinations(payload.roomId, payload.sessionToken, payload.keepIds);
+      emitStateForRoom(payload.roomId);
     } catch (error) {
       socket.emit("room:error", (error as Error).message);
     }
@@ -150,6 +169,7 @@ io.on("connection", (socket) => {
 
   socket.on("reconnect", (payload) => {
     try {
+      socket.data.sessionToken = payload.sessionToken;
       socket.join(payload.roomId);
       const state = rooms.reconnect(payload.roomId, payload.sessionToken);
       socket.emit("reconnect:success", state);
