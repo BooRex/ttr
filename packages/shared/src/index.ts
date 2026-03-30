@@ -37,6 +37,8 @@ export type Route = {
   to: string;
   length: number;
   color: Exclude<CardColor, "locomotive"> | "gray";
+  routeType?: "normal" | "tunnel" | "ferry" | "double";
+  ferryLocomotives?: number;
   ownerSessionToken?: string;
 };
 

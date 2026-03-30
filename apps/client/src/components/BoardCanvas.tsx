@@ -29,6 +29,17 @@ const sameRoutePair = (a: Route, b: Route): boolean => (
   (a.from === b.from && a.to === b.to) || (a.from === b.to && a.to === b.from)
 );
 
+const getCanonicalEndpoints = (route: Route, points: Record<string, Point>): { from: Point; to: Point } | null => {
+  const fromPoint = points[route.from];
+  const toPoint = points[route.to];
+  if (!fromPoint || !toPoint) return null;
+  const forwardKey = `${route.from}|${route.to}`;
+  const reverseKey = `${route.to}|${route.from}`;
+  return forwardKey <= reverseKey
+    ? { from: fromPoint, to: toPoint }
+    : { from: toPoint, to: fromPoint };
+};
+
 const makeSegmentPoints = (
   from: Point,
   to: Point,
@@ -228,7 +239,7 @@ export const BoardCanvas = ({
         .filter((candidate) => sameRoutePair(candidate, route))
         .sort((a, b) => a.id.localeCompare(b.id));
       const index = siblings.findIndex((candidate) => candidate.id === route.id);
-      const offset = siblings.length > 1 ? (index - (siblings.length - 1) / 2) * 10 : 0;
+      const offset = siblings.length > 1 ? (index - (siblings.length - 1) / 2) * 14 : 0;
       map.set(route.id, offset);
     }
     return map;
@@ -289,9 +300,9 @@ export const BoardCanvas = ({
         <Layer>
           {/* ── Routes ── */}
           {routes.map(route => {
-            const from = CITY_POINTS[route.from];
-            const to   = CITY_POINTS[route.to];
-            if (!from || !to) return null;
+            const endpoints = getCanonicalEndpoints(route, CITY_POINTS);
+            if (!endpoints) return null;
+            const { from, to } = endpoints;
 
             const ownerIdx = route.ownerSessionToken
               ? players.findIndex(p => p.sessionToken === route.ownerSessionToken)

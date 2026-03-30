@@ -301,8 +301,43 @@ export class GameEngine {
         activePlayer.hand.filter((c) => c.color === neededColor).length,
         route.length,
       ))));
-    let needColorCards = route.length - requestedLoco;
-    let needLocoCards = requestedLoco;
+
+    const tunnelReveal: TrainCard[] = route.routeType === "tunnel" ? this.revealTunnelCards(3) : [];
+    const tunnelExtra = route.routeType === "tunnel"
+      ? tunnelReveal.filter((card) => (
+        neededColor === "locomotive"
+          ? card.color === "locomotive"
+          : card.color === neededColor || card.color === "locomotive"
+      )).length
+      : 0;
+
+    if (route.routeType === "ferry") {
+      const requiredLocos = Math.max(1, route.ferryLocomotives ?? 1);
+      if (requestedLoco < requiredLocos) {
+        throw new Error(`Для парома нужно минимум ${requiredLocos} локомотив(а)`);
+      }
+    }
+
+    const totalRequired = route.length + tunnelExtra;
+    const colorAvailable = neededColor === "locomotive"
+      ? 0
+      : activePlayer.hand.filter((c) => c.color === neededColor).length;
+    const locoAvailable = activePlayer.hand.filter((c) => c.color === "locomotive").length;
+
+    let needColorCards = neededColor === "locomotive" ? 0 : (route.length - requestedLoco);
+    let needLocoCards = neededColor === "locomotive" ? totalRequired : requestedLoco;
+
+    if (neededColor !== "locomotive" && tunnelExtra > 0) {
+      const colorReserve = Math.max(0, colorAvailable - needColorCards);
+      const payWithColor = Math.min(tunnelExtra, colorReserve);
+      needColorCards += payWithColor;
+      needLocoCards += tunnelExtra - payWithColor;
+    }
+
+    if (needColorCards > colorAvailable || needLocoCards > locoAvailable) {
+      throw new Error("Недостаточно карт для оплаты туннеля");
+    }
+
     const newHand: TrainCard[] = [];
     for (const c of activePlayer.hand) {
       if (needColorCards > 0 && c.color === neededColor) {
@@ -321,6 +356,10 @@ export class GameEngine {
       throw new Error("Не удалось списать выбранную комбинацию карт");
     }
     activePlayer.hand = newHand;
+
+    if (tunnelReveal.length > 0) {
+      state.log.unshift(`${activePlayer.nickname} проверил туннель: +${tunnelExtra} (${tunnelReveal.map((c) => c.color).join(", ")})`);
+    }
 
     route.ownerSessionToken = activePlayer.sessionToken;
     activePlayer.wagonsLeft -= route.length;
@@ -448,6 +487,25 @@ export class GameEngine {
     state.trainDeckCount = this.trainDeck.length;
     state.discardDeckCount = this.discardDeck.length;
     state.destinationDeckCount = this.destinationDeck.length;
+  }
+
+  private drawTrainCardWithReshuffle(): TrainCard | null {
+    if (this.trainDeck.length === 0 && this.discardDeck.length > 0) {
+      this.trainDeck = shuffle([...this.discardDeck]);
+      this.discardDeck = [];
+    }
+    return drawFromDeck(this.trainDeck);
+  }
+
+  private revealTunnelCards(count: number): TrainCard[] {
+    const revealed: TrainCard[] = [];
+    for (let i = 0; i < count; i += 1) {
+      const card = this.drawTrainCardWithReshuffle();
+      if (!card) break;
+      revealed.push(card);
+      this.discardDeck.push(card);
+    }
+    return revealed;
   }
 }
 

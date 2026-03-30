@@ -270,11 +270,11 @@ describe("GameEngine", () => {
       { maxPlayers: 2, turnTimerSeconds: null }
     );
 
-    state.routes.find((r) => r.id === "e3")!.ownerSessionToken = "a";
+    state.routes.find((r) => r.id === "e14")!.ownerSessionToken = "a";
     state.activePlayerIndex = 1;
-    state.players[1]!.hand = [{ color: "blue" }, { color: "blue" }];
+    state.players[1]!.hand = [{ color: "pink" }, { color: "pink" }, { color: "pink" }, { color: "pink" }];
 
-    expect(() => engine.claimRoute(state, "b", "e67", "blue", 0)).toThrow("При 2–3 игроках второй параллельный путь недоступен");
+    expect(() => engine.claimRoute(state, "b", "e73", "pink", 0)).toThrow("При 2–3 игроках второй параллельный путь недоступен");
   });
 
   it("разрешает брать оба параллельных пути при 4 игроках", () => {
@@ -291,14 +291,62 @@ describe("GameEngine", () => {
       { maxPlayers: 4, turnTimerSeconds: null }
     );
 
-    const first = state.routes.find((r) => r.id === "e3")!;
-    const second = state.routes.find((r) => r.id === "e67")!;
+    const first = state.routes.find((r) => r.id === "e14")!;
+    const second = state.routes.find((r) => r.id === "e73")!;
     first.ownerSessionToken = "a";
     state.activePlayerIndex = 1;
-    state.players[1]!.hand = [{ color: "blue" }, { color: "blue" }];
+    state.players[1]!.hand = [{ color: "pink" }, { color: "pink" }, { color: "pink" }, { color: "pink" }];
 
-    engine.claimRoute(state, "b", second.id, "blue", 0);
+    engine.claimRoute(state, "b", second.id, "pink", 0);
     expect(second.ownerSessionToken).toBe("b");
+  });
+
+  it("требует минимум локомотивов для парома", () => {
+    const engine = new GameEngine();
+    const state = engine.initGame(
+      "ROOM_EURO_FERRY_REQ",
+      [
+        { sessionToken: "a", nickname: "A", wagonsLeft: 45, hand: [], destinations: [], points: 0 },
+        { sessionToken: "b", nickname: "B", wagonsLeft: 45, hand: [], destinations: [], points: 0 }
+      ],
+      "europe",
+      { maxPlayers: 2, turnTimerSeconds: null }
+    );
+
+    state.players[0]!.hand = [
+      { color: "orange" }, { color: "orange" }, { color: "orange" }, { color: "orange" }, { color: "orange" },
+      { color: "locomotive" },
+    ];
+
+    expect(() => engine.claimRoute(state, "a", "e59", "orange", 1)).toThrow("Для парома нужно минимум 2 локомотив(а)");
+  });
+
+  it("требует доплату при туннеле по открытым картам", () => {
+    const engine = new GameEngine();
+    const state = engine.initGame(
+      "ROOM_EURO_TUNNEL_REQ",
+      [
+        { sessionToken: "a", nickname: "A", wagonsLeft: 45, hand: [], destinations: [], points: 0 },
+        { sessionToken: "b", nickname: "B", wagonsLeft: 45, hand: [], destinations: [], points: 0 }
+      ],
+      "europe",
+      { maxPlayers: 2, turnTimerSeconds: null }
+    );
+
+    state.players[0]!.hand = [
+      { color: "yellow" },
+      { color: "yellow" },
+      { color: "locomotive" },
+    ];
+
+    (engine as any).trainDeck = [
+      { color: "yellow" },
+      { color: "blue" },
+      { color: "locomotive" },
+      ...((engine as any).trainDeck as Array<{ color: string }>),
+    ];
+
+    expect(() => engine.claimRoute(state, "a", "e9", "yellow", 0)).toThrow("Недостаточно карт для оплаты туннеля");
   });
 });
 
