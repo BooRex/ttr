@@ -496,6 +496,26 @@ describe("GameEngine", () => {
     expect(state.trainDeckCount).toBeGreaterThanOrEqual(0);
   });
 
+  it("не залипает действие хода после неудачного захвата маршрута", () => {
+    const engine = new GameEngine();
+    const state = engine.initGame(
+      "ROOM_ACTION_ROLLBACK",
+      [
+        { sessionToken: "a", nickname: "A", wagonsLeft: 45, hand: [], destinations: [], points: 0 },
+        { sessionToken: "b", nickname: "B", wagonsLeft: 45, hand: [], destinations: [], points: 0 }
+      ],
+      "usa",
+      { maxPlayers: 2, turnTimerSeconds: null }
+    );
+
+    state.players[0]!.hand = [];
+
+    expect(() => engine.claimRoute(state, "a", "r1", "blue", 0)).toThrow("Недостаточно карт");
+    expect(state.turnActionState.action).toBeNull();
+
+    expect(() => engine.drawDestinations(state, "a")).not.toThrow();
+  });
+
   it("считает выполненный маршрут через станцию в финальном подсчете", () => {
     const engine = new GameEngine();
     const state = engine.initGame(

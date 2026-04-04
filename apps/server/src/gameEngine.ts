@@ -168,31 +168,37 @@ export class GameEngine {
     if (typeof openIndex === "number" && state.turnActionState.drawCardsTaken > 0) {
       throw new Error("Открытую карту можно взять только как первое и единственное действие добора");
     }
+    const previousAction = state.turnActionState.action;
     state.turnActionState.action = "draw_cards";
 
-    let card: TrainCard | null;
-    if (typeof openIndex === "number") {
-      card = state.openCards[openIndex] ?? null;
-      if (!card) throw new Error("Карта не найдена");
-      state.openCards.splice(openIndex, 1);
-      const replacement = this.drawTrainCard();
-      if (replacement) state.openCards.push(replacement);
-    } else {
-      card = this.drawTrainCard();
-    }
+    try {
+      let card: TrainCard | null;
+      if (typeof openIndex === "number") {
+        card = state.openCards[openIndex] ?? null;
+        if (!card) throw new Error("Карта не найдена");
+        state.openCards.splice(openIndex, 1);
+        const replacement = this.drawTrainCard();
+        if (replacement) state.openCards.push(replacement);
+      } else {
+        card = this.drawTrainCard();
+      }
 
-    if (!card) throw new Error("Колода пуста");
+      if (!card) throw new Error("Колода пуста");
 
-    activePlayer.hand.push(card);
-    state.log.unshift(`${activePlayer.nickname} берет карту`);
-    pushEvent(state, { id: eventId(), type: "draw_card", sessionToken: activePlayer.sessionToken, nickname: activePlayer.nickname });
-    state.turnActionState.drawCardsTaken += 1;
-    const shouldEndTurn = typeof openIndex === "number" || state.turnActionState.drawCardsTaken >= 2;
-    if (shouldEndTurn) {
-      this.finishTurnAndMaybeEndGame(state);
+      activePlayer.hand.push(card);
+      state.log.unshift(`${activePlayer.nickname} берет карту`);
+      pushEvent(state, { id: eventId(), type: "draw_card", sessionToken: activePlayer.sessionToken, nickname: activePlayer.nickname });
+      state.turnActionState.drawCardsTaken += 1;
+      const shouldEndTurn = typeof openIndex === "number" || state.turnActionState.drawCardsTaken >= 2;
+      if (shouldEndTurn) {
+        this.finishTurnAndMaybeEndGame(state);
+      }
+      this.syncDeckCounts(state);
+      return state;
+    } catch (error) {
+      state.turnActionState.action = previousAction;
+      throw error;
     }
-    this.syncDeckCounts(state);
-    return state;
   }
 
   drawDestinations(state: GameState, playerToken: string): GameState {
@@ -206,20 +212,26 @@ export class GameEngine {
     if (state.turnActionState.action) {
       throw new Error("В этом ходу уже выбрано другое действие");
     }
+    const previousAction = state.turnActionState.action;
     state.turnActionState.action = "draw_destinations";
 
-    const cards = [this.destinationDeck.pop(), this.destinationDeck.pop(), this.destinationDeck.pop()].filter(Boolean) as DestinationCard[];
-    if (cards.length === 0) throw new Error("Колода маршрутов пуста");
+    try {
+      const cards = [this.destinationDeck.pop(), this.destinationDeck.pop(), this.destinationDeck.pop()].filter(Boolean) as DestinationCard[];
+      if (cards.length === 0) throw new Error("Колода маршрутов пуста");
 
-    state.pendingDestinationChoice = {
-      sessionToken: playerToken,
-      cards,
-      minKeep: Math.min(1, cards.length)
-    };
-    state.log.unshift(`${activePlayer.nickname} берет карты маршрутов`);
-    pushEvent(state, { id: eventId(), type: "draw_destinations", sessionToken: activePlayer.sessionToken, nickname: activePlayer.nickname });
-    this.syncDeckCounts(state);
-    return state;
+      state.pendingDestinationChoice = {
+        sessionToken: playerToken,
+        cards,
+        minKeep: Math.min(1, cards.length)
+      };
+      state.log.unshift(`${activePlayer.nickname} берет карты маршрутов`);
+      pushEvent(state, { id: eventId(), type: "draw_destinations", sessionToken: activePlayer.sessionToken, nickname: activePlayer.nickname });
+      this.syncDeckCounts(state);
+      return state;
+    } catch (error) {
+      state.turnActionState.action = previousAction;
+      throw error;
+    }
   }
 
   chooseDestinations(state: GameState, playerToken: string, keepIds: string[]): GameState {
@@ -269,27 +281,29 @@ export class GameEngine {
     if (state.turnActionState.action) {
       throw new Error("В этом ходу уже выбрано другое действие");
     }
+    const previousAction = state.turnActionState.action;
     state.turnActionState.action = "claim_route";
 
-    const route = state.routes.find((r) => r.id === routeId);
-    if (!route) throw new Error("Маршрут не найден");
-    if (route.ownerSessionToken) throw new Error("Маршрут уже занят");
-    const parallelRoutes = state.routes.filter((r) => r.id !== route.id && sameRoutePair(r, route));
-    if (state.players.length <= 3 && parallelRoutes.some((r) => r.ownerSessionToken)) {
-      throw new Error("При 2–3 игроках второй параллельный путь недоступен");
-    }
-    if (activePlayer.wagonsLeft < route.length) throw new Error("Недостаточно вагонов");
+    try {
+      const route = state.routes.find((r) => r.id === routeId);
+      if (!route) throw new Error("Маршрут не найден");
+      if (route.ownerSessionToken) throw new Error("Маршрут уже занят");
+      const parallelRoutes = state.routes.filter((r) => r.id !== route.id && sameRoutePair(r, route));
+      if (state.players.length <= 3 && parallelRoutes.some((r) => r.ownerSessionToken)) {
+        throw new Error("При 2–3 игроках второй параллельный путь недоступен");
+      }
+      if (activePlayer.wagonsLeft < route.length) throw new Error("Недостаточно вагонов");
 
-    const neededColor = route.color === "gray" ? color : route.color;
+      const neededColor = route.color === "gray" ? color : route.color;
     // For non-gray colored routes locomotive is not a valid base color
-    if (neededColor === "locomotive" && route.color !== "gray") throw new Error("Неверный цвет");
+      if (neededColor === "locomotive" && route.color !== "gray") throw new Error("Неверный цвет");
 
-    const locoCards = activePlayer.hand.filter((c) => c.color === "locomotive").length;
+      const locoCards = activePlayer.hand.filter((c) => c.color === "locomotive").length;
 
-    if (neededColor === "locomotive") {
+      if (neededColor === "locomotive") {
       // Pure locomotive claim on a gray route
       if (locoCards < route.length) throw new Error("Недостаточно карт-локомотивов");
-    } else {
+      } else {
       const colorCards = activePlayer.hand.filter((c) => c.color === neededColor).length;
       if (colorCards + locoCards < route.length) throw new Error("Недостаточно карт");
       if (typeof useLocomotives === "number") {
@@ -299,82 +313,86 @@ export class GameEngine {
           throw new Error("Недостаточно карт для выбранной комбинации");
         }
       }
-    }
+      }
 
-    const requestedLoco = neededColor === "locomotive"
+      const requestedLoco = neededColor === "locomotive"
       ? route.length
       : Math.max(0, Math.min(route.length, useLocomotives ?? (route.length - Math.min(
         activePlayer.hand.filter((c) => c.color === neededColor).length,
         route.length,
       ))));
 
-    const minRequiredLocos = getMinRequiredLocomotives(route);
-    if (requestedLoco < minRequiredLocos) {
-      throw new Error(`Для этого маршрута нужно минимум ${minRequiredLocos} локомотив(а)`);
-    }
+      const minRequiredLocos = getMinRequiredLocomotives(route);
+      if (requestedLoco < minRequiredLocos) {
+        throw new Error(`Для этого маршрута нужно минимум ${minRequiredLocos} локомотив(а)`);
+      }
 
-    const colorAvailable = neededColor === "locomotive"
+      const colorAvailable = neededColor === "locomotive"
       ? 0
       : activePlayer.hand.filter((c) => c.color === neededColor).length;
-    const locoAvailable = activePlayer.hand.filter((c) => c.color === "locomotive").length;
+      const locoAvailable = activePlayer.hand.filter((c) => c.color === "locomotive").length;
 
-    let needColorCards = neededColor === "locomotive" ? 0 : (route.length - requestedLoco);
-    let needLocoCards = neededColor === "locomotive" ? route.length : requestedLoco;
+      let needColorCards = neededColor === "locomotive" ? 0 : (route.length - requestedLoco);
+      let needLocoCards = neededColor === "locomotive" ? route.length : requestedLoco;
 
-    if (needColorCards > colorAvailable || needLocoCards > locoAvailable) {
-      throw new Error("Недостаточно карт");
-    }
-
-    const newHand: TrainCard[] = [];
-    for (const c of activePlayer.hand) {
-      if (needColorCards > 0 && c.color === neededColor) {
-        this.discardDeck.push(c);
-        needColorCards -= 1;
-        continue;
+      if (needColorCards > colorAvailable || needLocoCards > locoAvailable) {
+        throw new Error("Недостаточно карт");
       }
-      if (needLocoCards > 0 && c.color === "locomotive") {
-        this.discardDeck.push(c);
-        needLocoCards -= 1;
-        continue;
+
+      const newHand: TrainCard[] = [];
+      for (const c of activePlayer.hand) {
+        if (needColorCards > 0 && c.color === neededColor) {
+          this.discardDeck.push(c);
+          needColorCards -= 1;
+          continue;
+        }
+        if (needLocoCards > 0 && c.color === "locomotive") {
+          this.discardDeck.push(c);
+          needLocoCards -= 1;
+          continue;
+        }
+        newHand.push(c);
       }
-      newHand.push(c);
-    }
-    if (needColorCards > 0 || needLocoCards > 0) {
-      throw new Error("Не удалось списать выбранную комбинацию карт");
-    }
-    activePlayer.hand = newHand;
+      if (needColorCards > 0 || needLocoCards > 0) {
+        throw new Error("Не удалось списать выбранную комбинацию карт");
+      }
+      activePlayer.hand = newHand;
 
-    route.ownerSessionToken = activePlayer.sessionToken;
-    activePlayer.wagonsLeft -= route.length;
-    activePlayer.points += pointsForRouteLength(route.length);
+      route.ownerSessionToken = activePlayer.sessionToken;
+      activePlayer.wagonsLeft -= route.length;
+      activePlayer.points += pointsForRouteLength(route.length);
 
-    state.log.unshift(`${activePlayer.nickname} захватил маршрут ${route.from} - ${route.to}`);
-    pushEvent(state, {
-      id: eventId(),
-      type: "claim_route",
-      sessionToken: activePlayer.sessionToken,
-      nickname: activePlayer.nickname,
-      routeId: route.id,
-      from: route.from,
-      to: route.to,
-      points: pointsForRouteLength(route.length),
-    });
-    if (!state.lastRoundTriggered && activePlayer.wagonsLeft <= 2) {
-      state.lastRoundTriggered = true;
-      state.lastRoundEndIndex = state.activePlayerIndex;
-      state.log.unshift(`Финальный раунд: у ${activePlayer.nickname} осталось ${activePlayer.wagonsLeft} вагонов`);
+      state.log.unshift(`${activePlayer.nickname} захватил маршрут ${route.from} - ${route.to}`);
       pushEvent(state, {
         id: eventId(),
-        type: "final_round",
+        type: "claim_route",
         sessionToken: activePlayer.sessionToken,
         nickname: activePlayer.nickname,
-        wagonsLeft: activePlayer.wagonsLeft,
+        routeId: route.id,
+        from: route.from,
+        to: route.to,
+        points: pointsForRouteLength(route.length),
       });
-    }
+      if (!state.lastRoundTriggered && activePlayer.wagonsLeft <= 2) {
+        state.lastRoundTriggered = true;
+        state.lastRoundEndIndex = state.activePlayerIndex;
+        state.log.unshift(`Финальный раунд: у ${activePlayer.nickname} осталось ${activePlayer.wagonsLeft} вагонов`);
+        pushEvent(state, {
+          id: eventId(),
+          type: "final_round",
+          sessionToken: activePlayer.sessionToken,
+          nickname: activePlayer.nickname,
+          wagonsLeft: activePlayer.wagonsLeft,
+        });
+      }
 
-    this.finishTurnAndMaybeEndGame(state);
-    this.syncDeckCounts(state);
-    return state;
+      this.finishTurnAndMaybeEndGame(state);
+      this.syncDeckCounts(state);
+      return state;
+    } catch (error) {
+      state.turnActionState.action = previousAction;
+      throw error;
+    }
   }
 
   buildStation(
@@ -395,25 +413,27 @@ export class GameEngine {
     if (state.turnActionState.action) {
       throw new Error("В этом ходу уже выбрано другое действие");
     }
+    const previousAction = state.turnActionState.action;
     state.turnActionState.action = "build_station";
 
-    const stationsLeft = activePlayer.stationsLeft ?? 0;
-    if (stationsLeft <= 0) {
-      throw new Error("У вас не осталось станций");
-    }
+    try {
+      const stationsLeft = activePlayer.stationsLeft ?? 0;
+      if (stationsLeft <= 0) {
+        throw new Error("У вас не осталось станций");
+      }
 
-    const map = MAPS[state.mapId] ?? MAPS.usa;
-    if (!map.cities.includes(city)) {
-      throw new Error("Город не найден на карте");
-    }
-    if (state.stations.some((station) => station.city === city)) {
-      throw new Error("В этом городе уже есть станция");
-    }
+      const map = MAPS[state.mapId] ?? MAPS.usa;
+      if (!map.cities.includes(city)) {
+        throw new Error("Город не найден на карте");
+      }
+      if (state.stations.some((station) => station.city === city)) {
+        throw new Error("В этом городе уже есть станция");
+      }
 
-    const cost = getStationBuildCost(stationsLeft);
-    const locoCards = activePlayer.hand.filter((c) => c.color === "locomotive").length;
+      const cost = getStationBuildCost(stationsLeft);
+      const locoCards = activePlayer.hand.filter((c) => c.color === "locomotive").length;
 
-    if (color !== "locomotive") {
+      if (color !== "locomotive") {
       const colorCards = activePlayer.hand.filter((c) => c.color === color).length;
       if (colorCards + locoCards < cost) throw new Error("Недостаточно карт для постройки станции");
       if (typeof useLocomotives === "number") {
@@ -423,63 +443,67 @@ export class GameEngine {
           throw new Error("Недостаточно карт для выбранной комбинации");
         }
       }
-    } else if (locoCards < cost) {
-      throw new Error("Недостаточно карт-локомотивов");
-    }
+      } else if (locoCards < cost) {
+        throw new Error("Недостаточно карт-локомотивов");
+      }
 
-    const requestedLoco = color === "locomotive"
+      const requestedLoco = color === "locomotive"
       ? cost
       : Math.max(0, Math.min(cost, useLocomotives ?? (cost - Math.min(
         activePlayer.hand.filter((c) => c.color === color).length,
         cost,
       ))));
 
-    const colorAvailable = color === "locomotive"
+      const colorAvailable = color === "locomotive"
       ? 0
       : activePlayer.hand.filter((c) => c.color === color).length;
-    const locoAvailable = activePlayer.hand.filter((c) => c.color === "locomotive").length;
+      const locoAvailable = activePlayer.hand.filter((c) => c.color === "locomotive").length;
 
-    let needColorCards = color === "locomotive" ? 0 : (cost - requestedLoco);
-    let needLocoCards = requestedLoco;
+      let needColorCards = color === "locomotive" ? 0 : (cost - requestedLoco);
+      let needLocoCards = requestedLoco;
 
-    if (needColorCards > colorAvailable || needLocoCards > locoAvailable) {
-      throw new Error("Недостаточно карт для постройки станции");
-    }
-
-    const newHand: TrainCard[] = [];
-    for (const card of activePlayer.hand) {
-      if (needColorCards > 0 && card.color === color) {
-        this.discardDeck.push(card);
-        needColorCards -= 1;
-        continue;
+      if (needColorCards > colorAvailable || needLocoCards > locoAvailable) {
+        throw new Error("Недостаточно карт для постройки станции");
       }
-      if (needLocoCards > 0 && card.color === "locomotive") {
-        this.discardDeck.push(card);
-        needLocoCards -= 1;
-        continue;
+
+      const newHand: TrainCard[] = [];
+      for (const card of activePlayer.hand) {
+        if (needColorCards > 0 && card.color === color) {
+          this.discardDeck.push(card);
+          needColorCards -= 1;
+          continue;
+        }
+        if (needLocoCards > 0 && card.color === "locomotive") {
+          this.discardDeck.push(card);
+          needLocoCards -= 1;
+          continue;
+        }
+        newHand.push(card);
       }
-      newHand.push(card);
+      if (needColorCards > 0 || needLocoCards > 0) {
+        throw new Error("Не удалось списать выбранную комбинацию карт");
+      }
+
+      activePlayer.hand = newHand;
+      activePlayer.stationsLeft = stationsLeft - 1;
+      state.stations.push({ city, ownerSessionToken: activePlayer.sessionToken });
+
+      state.log.unshift(`${activePlayer.nickname} построил станцию в ${city}`);
+      pushEvent(state, {
+        id: eventId(),
+        type: "build_station",
+        sessionToken: activePlayer.sessionToken,
+        nickname: activePlayer.nickname,
+        city,
+      });
+
+      this.finishTurnAndMaybeEndGame(state);
+      this.syncDeckCounts(state);
+      return state;
+    } catch (error) {
+      state.turnActionState.action = previousAction;
+      throw error;
     }
-    if (needColorCards > 0 || needLocoCards > 0) {
-      throw new Error("Не удалось списать выбранную комбинацию карт");
-    }
-
-    activePlayer.hand = newHand;
-    activePlayer.stationsLeft = stationsLeft - 1;
-    state.stations.push({ city, ownerSessionToken: activePlayer.sessionToken });
-
-    state.log.unshift(`${activePlayer.nickname} построил станцию в ${city}`);
-    pushEvent(state, {
-      id: eventId(),
-      type: "build_station",
-      sessionToken: activePlayer.sessionToken,
-      nickname: activePlayer.nickname,
-      city,
-    });
-
-    this.finishTurnAndMaybeEndGame(state);
-    this.syncDeckCounts(state);
-    return state;
   }
 
   skipTurn(state: GameState, reason: string): GameState {
