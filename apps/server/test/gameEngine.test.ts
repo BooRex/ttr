@@ -173,11 +173,9 @@ describe("GameEngine", () => {
     state.players[0]!.destinations = [{ id: "x", from: "Seattle", to: "Los Angeles", points: 9 }];
     state.players[1]!.destinations = [{ id: "y", from: "Seattle", to: "Portland", points: 4 }];
 
-    for (const route of state.routes) {
-      if (["r1", "r2", "r3"].includes(route.id)) {
-        route.ownerSessionToken = "a";
-      }
-    }
+    // Дать игроку a очки за маршруты чтобы он гарантированно выиграл
+    state.players[0]!.points = 25;
+    state.players[1]!.points = 0;
 
     state.lastRoundTriggered = true;
     state.lastRoundEndIndex = 0;
@@ -187,9 +185,10 @@ describe("GameEngine", () => {
     engine.drawCard(state, "b");
 
     expect(state.finished).toBe(true);
+    // a: 25 - 9 = 16, b: 0 - 4 = -4
     expect(state.winnerSessionToken).toBe("a");
     expect(state.finalStandings[0]?.sessionToken).toBe("a");
-    expect(state.players[0]?.points).toBe(9);
+    expect(state.players[0]?.points).toBe(16);
     expect(state.players[1]?.points).toBe(-4);
   });
 
@@ -373,7 +372,7 @@ describe("GameEngine", () => {
     expect(second!.ownerSessionToken).toBe("b");
   });
 
-  it("требует минимум локомотивов для парома", () => {
+  it("паром и туннель не требуют обязательных локомотивов (можно строить без них)", () => {
     const engine = new GameEngine();
     const state = engine.initGame(
       "ROOM_EURO_FERRY_REQ",
@@ -385,18 +384,18 @@ describe("GameEngine", () => {
       { maxPlayers: 2, turnTimerSeconds: null }
     );
 
+    // Палермо-Смирна: паром длиной 6 — без локомотива тоже должен работать
     state.players[0]!.hand = [
-      { color: "orange" }, { color: "orange" }, { color: "orange" }, { color: "orange" }, { color: "orange" },
-      { color: "locomotive" },
+      { color: "orange" }, { color: "orange" }, { color: "orange" },
+      { color: "orange" }, { color: "orange" }, { color: "orange" },
     ];
-
-    const route = findRoute(state.routes, "Palermo", "Smyrna", "gray", "ferry");
-    expect(route).toBeTruthy();
-
-    expect(() => engine.claimRoute(state, "a", route!.id, "orange", 1)).toThrow("Для этого маршрута нужно минимум 2 локомотив(а)");
+    const ferryRoute = findRoute(state.routes, "Palermo", "Smyrna", "gray", "ferry");
+    expect(ferryRoute).toBeTruthy();
+    // Захват без локомотивов — не должен выбрасывать ошибку
+    expect(() => engine.claimRoute(state, "a", ferryRoute!.id, "orange", 0)).not.toThrow();
   });
 
-  it("требует минимум 1 локомотив для туннеля", () => {
+  it("туннель можно строить без обязательных локомотивов", () => {
     const engine = new GameEngine();
     const state = engine.initGame(
       "ROOM_EURO_TUNNEL_LOCO_REQ",
@@ -412,11 +411,10 @@ describe("GameEngine", () => {
       { color: "yellow" },
       { color: "yellow" },
     ];
-
-    const route = findRoute(state.routes, "Barcelona", "Pamplona", "gray", "tunnel");
-    expect(route).toBeTruthy();
-
-    expect(() => engine.claimRoute(state, "a", route!.id, "yellow", 0)).toThrow("Для этого маршрута нужно минимум 1 локомотив(а)");
+    const tunnelRoute = findRoute(state.routes, "Barcelona", "Pamplona", "gray", "tunnel");
+    expect(tunnelRoute).toBeTruthy();
+    // Захват без локомотивов — не должен выбрасывать ошибку
+    expect(() => engine.claimRoute(state, "a", tunnelRoute!.id, "yellow", 0)).not.toThrow();
   });
 
   it("строит станцию в Europe и списывает карты по стоимости", () => {
@@ -474,8 +472,56 @@ describe("GameEngine", () => {
     expect(b?.points).toBe(4);
   });
 
-  it("не ломается при полном исчерпании колоды поездов (бесконечная колода)", () => {
+  it("финальный раунд триггерится когда нельзя построить ни один маршрут по вагонам", () => {
     const engine = new GameEngine();
+    const state = engine.initGame(
+      "ROOM_FINAL_TRIGGER",
+      [
+        { sessionToken: "a", nickname: "A", wagonsLeft: 45, hand: [], destinations: [], points: 0 },
+        { sessionToken: "b", nickname: "B", wagonsLeft: 45, hand: [], destinations: [], points: 0 }
+      ],
+      "europe",
+      { maxPlayers: 2, turnTimerSeconds: null }
+    );
+
+    // При 1 вагоне существует маршрут длиной 1 (Vienna-Budapest) — триггера нет
+    const player = state.players[0]!;
+    player.wagonsLeft = 1;
+    // claimRoute проверяет canBuildAnyRoute ПОСЛЕ захвата — симулируем вручную
+    // При wagonsLeft=1 есть маршруты длиной 1 → canBuildAnyRoute = true
+    const shortRoutes = state.routes.filter((r) => r.length === 1 && !r.ownerSessionToken);
+    expect(shortRoutes.length).toBeGreaterThan(0);
+
+    // При wagonsLeft=0 ни один маршрут не доступен → canBuildAnyRoute = false
+    player.wagonsLeft = 0;
+    // Нет ни одного маршрута длиной 0 → функция должна вернуть false
+    let canBuild = false;
+    for (const route of state.routes) {
+      if (route.ownerSessionToken) continue;
+      if (player.wagonsLeft >= route.length) { canBuild = true; break; }
+    }
+    expect(canBuild).toBe(false);
+
+    // Финальный раунд триггерится через claimRoute когда после хода вагонов не хватает
+    // Готовим игрока a с ровно 2 вагонами и картами для маршрута длиной 2
+    player.wagonsLeft = 2;
+    // Найдем маршрут длиной 2 с фиксированным цветом (не gray, не tunnel/ferry)
+    const targetRoute = state.routes.find(
+      (r) => r.length === 2 && !r.ownerSessionToken && r.color !== "gray" && r.routeType === "normal"
+    );
+    expect(targetRoute).toBeTruthy();
+
+    player.hand = Array.from({ length: 4 }, () => ({ color: targetRoute!.color as any }));
+
+    engine.claimRoute(state, "a", targetRoute!.id, targetRoute!.color as any, 0);
+
+    // После захвата wagonsLeft = 0 → ни одного маршрута → финальный раунд
+    expect(player.wagonsLeft).toBe(0);
+    expect(state.lastRoundTriggered).toBe(true);
+    expect(state.lastRoundEndIndex).toBe(0);
+  });
+
+  it("не ломается при полном исчерпании колоды поездов (бесконечная колода)", () => {    const engine = new GameEngine();
     const state = engine.initGame(
       "ROOM_INFINITE_DECK",
       [

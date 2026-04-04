@@ -29,10 +29,20 @@ export const GameTopbar = ({
   onOpenScoringHelp,
 }: Props) => {
   const activePlayer = game.players[game.activePlayerIndex];
+  const finalRoundTrigger = game.lastRoundTriggered && game.lastRoundEndIndex !== null
+    ? game.players[game.lastRoundEndIndex]
+    : null;
 
   return (
     <div className="game-topbar">
       <span className="room-badge">{game.roomId}</span>
+
+      {game.lastRoundTriggered && !game.finished && (
+        <span className="final-round-badge" title={finalRoundTrigger ? `${finalRoundTrigger.nickname} ${t(lang, "ui.finalRoundTriggeredBy")}` : ""}>
+          🔔 {t(lang, "ui.finalRound")}
+        </span>
+      )}
+
       {activePlayer && !game.finished && (
         <span className={["text-xs inline-flex items-center gap-1.5", turnPulse ? "turn-pulse text-green-300" : "text-slate-300"].join(" ")}>
           <span className="w-2.5 h-2.5 rounded-full" style={{ background: PLAYER_COLORS[game.activePlayerIndex] }} />

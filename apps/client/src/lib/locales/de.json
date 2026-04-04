@@ -60,6 +60,8 @@
     "anotherPlayerChoosing": "Ein anderer Spieler wählt Zielkarten…",
     "waitingOtherTurn": "Warten auf den Zug eines anderen Spielers…",
     "waitingHostStart": "Warten, bis der Host das Spiel startet…",
+    "finalRound": "Letzte Runde",
+    "finalRoundTriggeredBy": "hat keine Waggons mehr — letzte Runde läuft",
     "deckCount": "im Stapel",
     "claimedMixed": "Kombination",
     "builtRoutes": "erfüllte Routen",

@@ -60,6 +60,8 @@
     "anotherPlayerChoosing": "Another player is choosing destinations…",
     "waitingOtherTurn": "Waiting for another player's turn…",
     "waitingHostStart": "Waiting for the host to start the game…",
+    "finalRound": "Final Round",
+    "finalRoundTriggeredBy": "ran out of wagons — final round in progress",
     "deckCount": "in deck",
     "claimedMixed": "combination",
     "builtRoutes": "completed routes",

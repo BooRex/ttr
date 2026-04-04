@@ -60,6 +60,8 @@
     "anotherPlayerChoosing": "Інший гравець вибирає маршрути…",
     "waitingOtherTurn": "Очікування чужого ходу…",
     "waitingHostStart": "Очікування, поки хост почне гру…",
+    "finalRound": "Останній раунд",
+    "finalRoundTriggeredBy": "закінчив вагони — йде останній раунд",
     "deckCount": "у колоді",
     "claimedMixed": "комбінація",
     "builtRoutes": "виконано маршрутів",

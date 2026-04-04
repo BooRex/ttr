@@ -45,6 +45,21 @@ const sameRoutePair = (a: Route, b: Route): boolean => (
   (a.from === b.from && a.to === b.to) || (a.from === b.to && a.to === b.from)
 );
 
+/**
+ * Проверяет, может ли игрок построить хоть один оставшийся маршрут.
+ * Учитывает ограничение на параллельные маршруты при 2–3 игроках.
+ */
+const canBuildAnyRoute = (state: GameState, player: Player): boolean => {
+  for (const route of state.routes) {
+    if (route.ownerSessionToken) continue;
+    if (player.wagonsLeft < route.length) continue;
+    const parallelRoutes = state.routes.filter((r) => r.id !== route.id && sameRoutePair(r, route));
+    if (state.players.length <= 3 && parallelRoutes.some((r) => r.ownerSessionToken)) continue;
+    return true;
+  }
+  return false;
+};
+
 const buildAdjacency = (state: GameState, sessionToken: string): Map<string, Set<string>> => {
   const adjacency = new Map<string, Set<string>>();
   for (const route of state.routes) {
@@ -373,10 +388,10 @@ export class GameEngine {
         to: route.to,
         points: pointsForRouteLength(route.length),
       });
-      if (!state.lastRoundTriggered && activePlayer.wagonsLeft <= 2) {
+      if (!state.lastRoundTriggered && !canBuildAnyRoute(state, activePlayer)) {
         state.lastRoundTriggered = true;
         state.lastRoundEndIndex = state.activePlayerIndex;
-        state.log.unshift(`Финальный раунд: у ${activePlayer.nickname} осталось ${activePlayer.wagonsLeft} вагонов`);
+        state.log.unshift(`Финальный раунд: у ${activePlayer.nickname} не хватает вагонов для маршрутов`);
         pushEvent(state, {
           id: eventId(),
           type: "final_round",
