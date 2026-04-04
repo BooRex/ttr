@@ -11,7 +11,7 @@ const sameRoutePair = (
 );
 
 const findRoute = (
-  routes: Array<{ from: string; to: string; color: string; routeType?: string; id: string }>,
+  routes: Array<{ from: string; to: string; color: string; routeType?: string; id: string; ownerSessionToken?: string }>,
   from: string,
   to: string,
   color?: string,
@@ -249,7 +249,7 @@ describe("GameEngine", () => {
 
     while (queue.length > 0) {
       const current = queue.shift() as string;
-      for (const next of adjacency.get(current) ?? []) {
+      for (const next of Array.from(adjacency.get(current) ?? [])) {
         if (visited.has(next)) continue;
         visited.add(next);
         queue.push(next);
@@ -472,6 +472,70 @@ describe("GameEngine", () => {
     const b = state.finalStandings.find((s) => s.sessionToken === "b");
     expect(a?.points).toBe(8);
     expect(b?.points).toBe(4);
+  });
+
+  it("не ломается при полном исчерпании колоды поездов (бесконечная колода)", () => {
+    const engine = new GameEngine();
+    const state = engine.initGame(
+      "ROOM_INFINITE_DECK",
+      [
+        { sessionToken: "a", nickname: "A", wagonsLeft: 45, hand: [], destinations: [], points: 0 },
+        { sessionToken: "b", nickname: "B", wagonsLeft: 45, hand: [], destinations: [], points: 0 }
+      ],
+      "usa",
+      { maxPlayers: 2, turnTimerSeconds: null }
+    );
+
+    for (let i = 0; i < 80; i += 1) {
+      const current = state.players[state.activePlayerIndex]!;
+      engine.drawCard(state, current.sessionToken);
+      engine.drawCard(state, current.sessionToken);
+    }
+
+    expect(state.players[0]!.hand.length + state.players[1]!.hand.length).toBeGreaterThan(100);
+    expect(state.trainDeckCount).toBeGreaterThanOrEqual(0);
+  });
+
+  it("считает выполненный маршрут через станцию в финальном подсчете", () => {
+    const engine = new GameEngine();
+    const state = engine.initGame(
+      "ROOM_EURO_STATION_DESTINATION",
+      [
+        { sessionToken: "a", nickname: "A", wagonsLeft: 45, hand: [], destinations: [], points: 0 },
+        { sessionToken: "b", nickname: "B", wagonsLeft: 45, hand: [], destinations: [], points: 0 }
+      ],
+      "europe",
+      { maxPlayers: 2, turnTimerSeconds: null }
+    );
+
+    state.players[0]!.destinations = [{ id: "zd1", from: "Dieppe", to: "Frankfurt", points: 8 }];
+    state.players[1]!.destinations = [];
+    state.players[0]!.points = 0;
+    state.players[1]!.points = 0;
+
+    const mine = findRoute(state.routes, "Dieppe", "Paris");
+    const enemy = findRoute(state.routes, "Paris", "Frankfurt");
+    expect(mine).toBeTruthy();
+    expect(enemy).toBeTruthy();
+    mine!.ownerSessionToken = "a";
+    enemy!.ownerSessionToken = "b";
+
+    state.stations.push({ city: "Paris", ownerSessionToken: "a" });
+    state.players[0]!.stationsLeft = 2;
+
+    state.lastRoundTriggered = true;
+    state.lastRoundEndIndex = 0;
+    state.activePlayerIndex = 1;
+
+    engine.drawCard(state, "b");
+    engine.drawCard(state, "b");
+
+    expect(state.finished).toBe(true);
+    const aStanding = state.finalStandings.find((s) => s.sessionToken === "a");
+    expect(aStanding?.completedDestinations).toBe(1);
+    expect(aStanding?.totalDestinations).toBe(1);
+    expect(aStanding?.destinationPointsDelta).toBe(8);
+    expect(aStanding?.stationPointsBonus).toBe(8);
   });
 });
 

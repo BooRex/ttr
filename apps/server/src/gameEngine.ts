@@ -100,13 +100,15 @@ export class GameEngine {
   }
 
   initGame(roomId: string, players: Player[], mapId: string, settings: GameSettings): GameState {
+    this.trainDeck = buildTrainDeck();
+    this.discardDeck = [];
     const map = MAPS[mapId] ?? MAPS.usa;
     this.destinationDeck = shuffle([...map.destinationDeck]);
 
     const seededPlayers = players.map((p) => {
       const hand: TrainCard[] = DEV_FAT_HAND
         ? makeDevHand()
-        : [drawFromDeck(this.trainDeck), drawFromDeck(this.trainDeck), drawFromDeck(this.trainDeck), drawFromDeck(this.trainDeck)]
+        : [this.drawTrainCard(), this.drawTrainCard(), this.drawTrainCard(), this.drawTrainCard()]
             .filter(Boolean) as TrainCard[];
       const destinations = [this.destinationDeck.pop(), this.destinationDeck.pop(), this.destinationDeck.pop()].filter(Boolean) as DestinationCard[];
       return {
@@ -119,7 +121,7 @@ export class GameEngine {
       };
     });
 
-    const openCards = [drawFromDeck(this.trainDeck), drawFromDeck(this.trainDeck), drawFromDeck(this.trainDeck), drawFromDeck(this.trainDeck), drawFromDeck(this.trainDeck)]
+    const openCards = [this.drawTrainCard(), this.drawTrainCard(), this.drawTrainCard(), this.drawTrainCard(), this.drawTrainCard()]
       .filter(Boolean) as TrainCard[];
 
     return {
@@ -173,10 +175,10 @@ export class GameEngine {
       card = state.openCards[openIndex] ?? null;
       if (!card) throw new Error("Карта не найдена");
       state.openCards.splice(openIndex, 1);
-      const replacement = drawFromDeck(this.trainDeck);
+      const replacement = this.drawTrainCard();
       if (replacement) state.openCards.push(replacement);
     } else {
-      card = drawFromDeck(this.trainDeck);
+      card = this.drawTrainCard();
     }
 
     if (!card) throw new Error("Колода пуста");
@@ -516,21 +518,28 @@ export class GameEngine {
     const standingsWithMeta = state.players.map((player) => {
       const destinationScore = this.scoreDestinations(state, player.sessionToken, player.destinations);
       player.points += destinationScore.delta;
+      const stationPointsBonus = state.mapId === "europe" ? (player.stationsLeft ?? 0) * 4 : 0;
       if (state.mapId === "europe") {
-        player.points += (player.stationsLeft ?? 0) * 4;
+        player.points += stationPointsBonus;
       }
       return {
         player,
-        completedDestinations: destinationScore.completed
+        completedDestinations: destinationScore.completed,
+        totalDestinations: player.destinations.length,
+        destinationPointsDelta: destinationScore.delta,
+        stationPointsBonus,
       };
     });
 
     const finalStandings: FinalStanding[] = standingsWithMeta
-      .map(({ player, completedDestinations }) => ({
+      .map(({ player, completedDestinations, totalDestinations, destinationPointsDelta, stationPointsBonus }) => ({
         sessionToken: player.sessionToken,
         nickname: player.nickname,
         points: player.points,
-        completedDestinations
+        completedDestinations,
+        totalDestinations,
+        destinationPointsDelta,
+        stationPointsBonus,
       }))
       .sort((a, b) => b.points - a.points || b.completedDestinations - a.completedDestinations || a.nickname.localeCompare(b.nickname));
 
@@ -618,6 +627,20 @@ export class GameEngine {
     state.trainDeckCount = this.trainDeck.length;
     state.discardDeckCount = this.discardDeck.length;
     state.destinationDeckCount = this.destinationDeck.length;
+  }
+
+  private drawTrainCard(): TrainCard | null {
+    if (this.trainDeck.length === 0) {
+      if (this.discardDeck.length > 0) {
+        this.trainDeck = shuffle(this.discardDeck);
+        this.discardDeck = [];
+      } else {
+        // Infinite deck mode: when all cards are exhausted, generate a fresh shuffled pack.
+        this.trainDeck = buildTrainDeck();
+      }
+    }
+
+    return drawFromDeck(this.trainDeck);
   }
 
 }

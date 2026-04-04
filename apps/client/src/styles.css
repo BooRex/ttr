@@ -215,6 +215,10 @@ button:not(:disabled):active { opacity: 0.7; }
   overflow: hidden;
 }
 
+.game-layout-finished {
+  grid-template-columns: minmax(220px, 260px) minmax(420px, 1fr) minmax(220px, 260px);
+}
+
 .game-side {
   min-height: 0;
   display: flex;
@@ -820,6 +824,47 @@ button:not(:disabled):active { opacity: 0.7; }
 .winner { color: #fbbf24; font-size: 1.1rem; font-weight: 700; }
 .standings { text-align: left; margin: 10px auto; max-width: 360px; }
 
+.final-side-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  height: 100%;
+}
+
+.final-side-item {
+  border: 1px solid #334155;
+  background: #0f172a;
+  border-radius: 10px;
+  padding: 8px 10px;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 6px 8px;
+  align-items: center;
+}
+
+.final-side-rank {
+  color: #94a3b8;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.final-side-name {
+  font-weight: 700;
+  font-size: 0.88rem;
+}
+
+.final-side-points {
+  color: #e2e8f0;
+  font-size: 0.88rem;
+  justify-self: end;
+}
+
+.final-side-meta {
+  grid-column: 1 / -1;
+  color: #94a3b8;
+  font-size: 0.75rem;
+}
+
 /* ── Toast ────────────────────────────────────────────────────────────────── */
 .toast-host {
   position: fixed;
@@ -843,6 +888,35 @@ button:not(:disabled):active { opacity: 0.7; }
 }
 .toast.error { border-color: #ef4444; }
 .toast button { padding: 2px 8px; min-height: 28px; }
+
+.global-ui-blocker {
+  position: fixed;
+  inset: 0;
+  z-index: 250;
+  display: grid;
+  place-items: center;
+}
+
+.global-ui-blocker-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(8, 12, 20, 0.4);
+  backdrop-filter: blur(4px);
+}
+
+.global-ui-loader {
+  position: relative;
+  width: 56px;
+  height: 56px;
+  border-radius: 999px;
+  border: 4px solid rgba(148, 163, 184, 0.35);
+  border-top-color: #f97316;
+  animation: uiSpin 0.8s linear infinite;
+}
+
+@keyframes uiSpin {
+  to { transform: rotate(360deg); }
+}
 
 /* ── Error strip ─────────────────────────────────────────────────────────── */
 .error { color: #fca5a5; }

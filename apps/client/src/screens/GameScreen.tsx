@@ -114,6 +114,11 @@ const GameScreenComponent = ({
   const activePlayerColor = activePlayerIndex >= 0
     ? PLAYER_COLORS[activePlayerIndex % PLAYER_COLORS.length]
     : "#94a3b8";
+  const finalStandings = game.finished
+    ? [...game.finalStandings].sort((a, b) => b.points - a.points)
+    : [];
+  const leftFinalPlayers = finalStandings.filter((_, idx) => idx % 2 === 0);
+  const rightFinalPlayers = finalStandings.filter((_, idx) => idx % 2 === 1);
 
   return (
     <div className="game-screen" data-testid="game-screen">
@@ -141,9 +146,28 @@ const GameScreenComponent = ({
         onOpenScoringHelp={onToggleScoringHelp}
       />
 
-      <div className="game-layout">
+      <div className={["game-layout", game.finished ? "game-layout-finished" : ""].join(" ")}>
         <aside className="game-side side-left">
-          {canUseLeftActions ? (
+          {game.finished ? (
+            <PanelShell title={t(lang, "results.finalStandings")} className="card side-card h-full">
+              <div className="final-side-list">
+                {leftFinalPlayers.map((standing, idx) => {
+                  const playerIndex = game.players.findIndex((p) => p.sessionToken === standing.sessionToken);
+                  const color = PLAYER_COLORS[Math.max(0, playerIndex) % PLAYER_COLORS.length] ?? "#94a3b8";
+                  return (
+                    <div key={standing.sessionToken} className="final-side-item">
+                      <span className="final-side-rank">#{idx * 2 + 1}</span>
+                      <span className="final-side-name" style={{ color }}>{standing.nickname}</span>
+                      <strong className="final-side-points">{standing.points} {t(lang, "ui.pointsShort")}</strong>
+                      <span className="final-side-meta">
+                        {standing.completedDestinations}/{standing.totalDestinations}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            </PanelShell>
+          ) : canUseLeftActions ? (
             <>
               <PanelShell
                 title={t(lang, "ui.routes")}
@@ -221,28 +245,56 @@ const GameScreenComponent = ({
             onSelectCity={canInteractWithBoard ? onSelectStationCity : undefined}
             onSelectRoute={canInteractWithBoard ? onSelectRoute : () => {}}
           />
-          <div className="market-strip card">
-            <MarketPanel
-              game={game}
-              lang={lang}
-              isMyTurn={isMyTurn}
-              canAct={canAct}
-              onDrawCard={onDrawCard}
-            />
-          </div>
+          {!game.finished && (
+            <div className="market-strip card">
+              <MarketPanel
+                game={game}
+                lang={lang}
+                isMyTurn={isMyTurn}
+                canAct={canAct}
+                onDrawCard={onDrawCard}
+              />
+            </div>
+          )}
         </div>
 
-        <GameRightPanel
-          game={game}
-          me={me}
-          winner={winner}
-          lang={lang}
-          onHoverDestination={onHoverDestination}
-          onLeaveDestination={() => onHoverDestination(null)}
-          onHoverConnection={onHoverConnection}
-          onLeaveConnection={onLeaveConnection}
-          onBackToLobby={onBackToLobby}
-        />
+        {game.finished ? (
+          <aside className="game-side side-right">
+            <PanelShell title={t(lang, "ui.gameOver")} className="card side-card h-full">
+              <div className="final-side-list">
+                {rightFinalPlayers.map((standing, idx) => {
+                  const playerIndex = game.players.findIndex((p) => p.sessionToken === standing.sessionToken);
+                  const color = PLAYER_COLORS[Math.max(0, playerIndex) % PLAYER_COLORS.length] ?? "#94a3b8";
+                  return (
+                    <div key={standing.sessionToken} className="final-side-item">
+                      <span className="final-side-rank">#{idx * 2 + 2}</span>
+                      <span className="final-side-name" style={{ color }}>{standing.nickname}</span>
+                      <strong className="final-side-points">{standing.points} {t(lang, "ui.pointsShort")}</strong>
+                      <span className="final-side-meta">
+                        {standing.completedDestinations}/{standing.totalDestinations}
+                      </span>
+                    </div>
+                  );
+                })}
+                <button type="button" className="mt-2" onClick={onBackToLobby}>
+                  {t(lang, "ui.toLobby")}
+                </button>
+              </div>
+            </PanelShell>
+          </aside>
+        ) : (
+          <GameRightPanel
+            game={game}
+            me={me}
+            winner={winner}
+            lang={lang}
+            onHoverDestination={onHoverDestination}
+            onLeaveDestination={() => onHoverDestination(null)}
+            onHoverConnection={onHoverConnection}
+            onLeaveConnection={onLeaveConnection}
+            onBackToLobby={onBackToLobby}
+          />
+        )}
       </div>
 
       <button className="events-fab" onClick={onToggleEvents}>

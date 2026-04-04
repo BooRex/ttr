@@ -14,6 +14,8 @@ const ROUTE_LENGTHS = [1, 2, 3, 4, 5, 6] as const;
 export const ScoringHelpModal = ({ open, lang, game, sessionToken, onClose }: Props) => {
   if (!open) return null;
 
+  const myFinalStanding = game.finalStandings.find((standing) => standing.sessionToken === sessionToken);
+
   const scoreHistory = [...(game.events ?? [])]
     .reverse()
     .flatMap((event) => {
@@ -34,6 +36,22 @@ export const ScoringHelpModal = ({ open, lang, game, sessionToken, onClose }: Pr
       }
       return [];
     });
+
+  if (game.finished && myFinalStanding) {
+    scoreHistory.push({
+      id: `destinations-${sessionToken}`,
+      label: `${t(lang, "ui.scoreDestinations")}: ${myFinalStanding.completedDestinations}/${myFinalStanding.totalDestinations}`,
+      delta: myFinalStanding.destinationPointsDelta,
+    });
+
+    if (myFinalStanding.stationPointsBonus !== 0) {
+      scoreHistory.push({
+        id: `stations-${sessionToken}`,
+        label: t(lang, "ui.scoreStations"),
+        delta: myFinalStanding.stationPointsBonus,
+      });
+    }
+  }
 
   let running = 0;
   const historyWithRunning = scoreHistory.map((item) => {

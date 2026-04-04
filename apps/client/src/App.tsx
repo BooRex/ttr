@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { DestinationCard } from "@ttr/shared";
 import { useAppStore } from "./store";
 import { useGameSession } from "./processes/game-session/useGameSession";
@@ -17,7 +17,7 @@ import {
   useLang,
   useHoverState,
 } from "./hooks";
-import { LobbyScreen, WaitingRoomScreen, GameScreen, ResultsScreen } from "./screens";
+import { LobbyScreen, WaitingRoomScreen, GameScreen } from "./screens";
 
 export const App = () => {
   const {
@@ -43,6 +43,8 @@ export const App = () => {
   const [isScoringHelpOpen, setIsScoringHelpOpen] = useState(false);
   const [hoveredPendingDestination, setHoveredPendingDestination] = useState<DestinationCard | null>(null);
   const [selectedStationCity, setSelectedStationCity] = useState("");
+  const [isUiBlocked, setIsUiBlocked] = useState(false);
+  const uiBlockTimeoutRef = useRef<number | null>(null);
 
   // ── Hooks ──────────────────────────────────────────────────────────────────
   const { isMobileLayout, isPortrait } = useMediaQueries();
@@ -61,6 +63,40 @@ export const App = () => {
   const { turnPulse } = useTurnPulse(activePlayer?.sessionToken, sessionToken);
   const { createRoom, joinRoom } = useLobbyLogic({ nickname, sessionToken });
   const gameLogic = useGameLogic({ game, roomId, sessionToken });
+
+  const clearUiBlock = useCallback(() => {
+    setIsUiBlocked(false);
+    if (uiBlockTimeoutRef.current !== null) {
+      window.clearTimeout(uiBlockTimeoutRef.current);
+      uiBlockTimeoutRef.current = null;
+    }
+  }, []);
+
+  const blockUiForRequest = useCallback(() => {
+    setIsUiBlocked(true);
+    if (uiBlockTimeoutRef.current !== null) {
+      window.clearTimeout(uiBlockTimeoutRef.current);
+    }
+    uiBlockTimeoutRef.current = window.setTimeout(() => {
+      setIsUiBlocked(false);
+      uiBlockTimeoutRef.current = null;
+    }, 8000);
+  }, []);
+
+  const withUiBlock = useCallback(<T extends unknown[]>(fn: (...args: T) => void) => {
+    return (...args: T) => {
+      blockUiForRequest();
+      fn(...args);
+    };
+  }, [blockUiForRequest]);
+
+  useEffect(() => {
+    return () => {
+      if (uiBlockTimeoutRef.current !== null) {
+        window.clearTimeout(uiBlockTimeoutRef.current);
+      }
+    };
+  }, []);
 
   useGameBodyLock(Boolean(game?.started));
 
@@ -92,7 +128,17 @@ export const App = () => {
     setGame,
     setError,
     addToast,
+    onServerResponse: clearUiBlock,
   });
+
+  const createRoomAction = useMemo(() => withUiBlock(createRoom), [withUiBlock, createRoom]);
+  const joinRoomAction = useMemo(() => withUiBlock(joinRoom), [withUiBlock, joinRoom]);
+  const startGameAction = useMemo(() => withUiBlock(gameLogic.startGame), [withUiBlock, gameLogic.startGame]);
+  const drawCardAction = useMemo(() => withUiBlock(gameLogic.drawCardFrom), [withUiBlock, gameLogic.drawCardFrom]);
+  const claimRouteAction = useMemo(() => withUiBlock(gameLogic.claimRoute), [withUiBlock, gameLogic.claimRoute]);
+  const buildStationAction = useMemo(() => withUiBlock(gameLogic.buildStation), [withUiBlock, gameLogic.buildStation]);
+  const drawDestinationsAction = useMemo(() => withUiBlock(gameLogic.drawDestinations), [withUiBlock, gameLogic.drawDestinations]);
+  const confirmDestinationsAction = useMemo(() => withUiBlock(gameLogic.confirmDestinations), [withUiBlock, gameLogic.confirmDestinations]);
 
   // ── Screen routing ─────────────────────────────────────────────────────────
   const inRoom = Boolean(game);
@@ -147,8 +193,8 @@ export const App = () => {
           mapId={mapId}
           onMapIdChange={setMapId}
           lang={lang}
-          onCreateRoom={createRoom}
-          onJoinRoom={joinRoom}
+          onCreateRoom={createRoomAction}
+          onJoinRoom={joinRoomAction}
         />
       )}
 
@@ -158,13 +204,13 @@ export const App = () => {
           game={game}
           lang={lang}
           sessionToken={sessionToken}
-          onStartGame={gameLogic.startGame}
+          onStartGame={startGameAction}
           onLeave={handleExitGame}
         />
       )}
 
       {/* Game Screen */}
-      {gameStarted && !game?.finished && game !== null && (
+      {gameStarted && game !== null && (
         <GameScreen
           game={game}
           lang={lang}
@@ -204,26 +250,16 @@ export const App = () => {
           onHoverDestination={setHoveredDestination}
           onHoverConnection={(from, to) => setHoveredConnection({ from, to })}
           onLeaveConnection={() => setHoveredConnection(null)}
-          onDrawCard={gameLogic.drawCardFrom}
-          onClaimRoute={gameLogic.claimRoute}
-          onBuildStation={gameLogic.buildStation}
+          onDrawCard={drawCardAction}
+          onClaimRoute={claimRouteAction}
+          onBuildStation={buildStationAction}
           selectedStationCity={selectedStationCity}
           onSelectStationCity={setSelectedStationCity}
           onSelectClaim={(opt) => gameLogic.onSelectClaim(opt.baseColor, opt.locoCount)}
-          onDrawDestinations={gameLogic.drawDestinations}
-          onConfirmDestinations={gameLogic.confirmDestinations}
+          onDrawDestinations={drawDestinationsAction}
+          onConfirmDestinations={confirmDestinationsAction}
           onDeselectRoute={() => gameLogic.setSelectedRouteId("")}
           onSetLang={setLang}
-          onBackToLobby={handleExitGame}
-        />
-      )}
-
-      {/* Results Screen */}
-      {game?.finished && game !== null && (
-        <ResultsScreen
-          game={game}
-          lang={lang}
-          sessionToken={sessionToken}
           onBackToLobby={handleExitGame}
         />
       )}
@@ -233,6 +269,13 @@ export const App = () => {
 
       {/* Toast notifications */}
       <ToastHost toasts={toasts} onDismiss={dismissToast} />
+
+      {isUiBlocked && (
+        <div className="global-ui-blocker" aria-live="polite" aria-busy="true">
+          <div className="global-ui-blocker-backdrop" />
+          <div className="global-ui-loader" role="status" aria-label="Loading" />
+        </div>
+      )}
     </div>
   );
 };

@@ -20,6 +20,9 @@ const WaitingRoomScreenComponent = ({
   onStartGame,
   onLeave,
 }: WaitingRoomScreenProps) => {
+  const hostSessionToken = game.players[0]?.sessionToken ?? "";
+  const isHost = hostSessionToken === sessionToken;
+
   return (
     <section className="card" data-testid="waiting-room-screen">
       <div className="row" style={{ justifyContent: "space-between" }}>
@@ -45,13 +48,17 @@ const WaitingRoomScreenComponent = ({
           current: game.players.length,
         })}
       </p>
-      <button
-        data-testid="start-game-btn"
-        onClick={onStartGame}
-        disabled={game.players.length < 2}
-      >
-        <span className="inline-flex items-center gap-1"><LocomotiveStatIcon />{t(lang, "ui.startGame")}</span>
-      </button>
+      {isHost ? (
+        <button
+          data-testid="start-game-btn"
+          onClick={onStartGame}
+          disabled={game.players.length < 2}
+        >
+          <span className="inline-flex items-center gap-1"><LocomotiveStatIcon />{t(lang, "ui.startGame")}</span>
+        </button>
+      ) : (
+        <p className="hint">{t(lang, "ui.waitingHostStart")}</p>
+      )}
     </section>
   );
 };

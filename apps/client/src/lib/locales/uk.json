@@ -59,6 +59,7 @@
     "keepMinimum": "Залиште мінімум {count} маршрут:",
     "anotherPlayerChoosing": "Інший гравець вибирає маршрути…",
     "waitingOtherTurn": "Очікування чужого ходу…",
+    "waitingHostStart": "Очікування, поки хост почне гру…",
     "deckCount": "у колоді",
     "claimedMixed": "комбінація",
     "builtRoutes": "виконано маршрутів",

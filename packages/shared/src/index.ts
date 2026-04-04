@@ -100,6 +100,9 @@ export type FinalStanding = {
   nickname: string;
   points: number;
   completedDestinations: number;
+  totalDestinations: number;
+  destinationPointsDelta: number;
+  stationPointsBonus: number;
 };
 
 export type GameState = {
