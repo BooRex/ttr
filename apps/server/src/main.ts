@@ -11,6 +11,7 @@ const expressCorsOrigin = corsOrigin === "*" ? true : corsOrigin;
 const app = express();
 app.use(cors({ origin: expressCorsOrigin, credentials: true }));
 
+
 app.get("/health", (_req, res) => {
   res.json({ ok: true });
 });
@@ -188,6 +189,7 @@ io.on("connection", (socket) => {
     }
   });
 });
+
 
 httpServer.listen(PORT, () => {
   // eslint-disable-next-line no-console
