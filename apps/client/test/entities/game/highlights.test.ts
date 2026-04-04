@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { Route } from "@ttr/shared";
 import {
   buildConnectionHighlight,
+  buildDestinationSelectionHighlight,
   buildOwnedDestinationHighlight,
   sameRoutePair,
 } from "../../../src/entities/game/model/highlights";
@@ -47,6 +48,16 @@ describe("highlights", () => {
     expect(hl.cityNames).toEqual(["London", "Frankfurt"]);
     expect(hl.routeIds).toContain("r1");
     expect(hl.routeIds).toContain("r2");
+  });
+
+  it("buildDestinationSelectionHighlight returns unique city endpoints", () => {
+    const hl = buildDestinationSelectionHighlight([
+      { id: "d1", from: "London", to: "Paris", points: 7 },
+      { id: "d2", from: "Paris", to: "Frankfurt", points: 5 },
+    ]);
+
+    expect(hl.routeIds).toEqual([]);
+    expect(hl.cityNames.sort()).toEqual(["Frankfurt", "London", "Paris"]);
   });
 });
 
