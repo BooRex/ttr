@@ -73,6 +73,8 @@
     "scoreDestinationsHint": "Am Spielende bringen erfüllte Zielkarten Punkte, unerfüllte ziehen Punkte ab.",
     "scoreStations": "Bahnhöfe",
     "scoreStationsHint": "Jeder ungenutzte Bahnhof gibt am Spielende +4 Punkte.",
+    "scoreLongestPath": "Längster Weg",
+    "scoreLongestPathHint": "Spieler mit dem längsten durchgehenden Weg erhalten +10 Punkte.",
     "scoreTie": "Gleichstand",
     "scoreTieHint": "Bei gleicher Punktzahl steht der Spieler mit mehr erfüllten Zielkarten höher.",
     "scoreHistory": "Punkteverlauf",

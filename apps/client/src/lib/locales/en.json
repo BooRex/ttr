@@ -73,6 +73,8 @@
     "scoreDestinationsHint": "At game end completed tickets add points, incomplete tickets subtract points.",
     "scoreStations": "Stations",
     "scoreStationsHint": "Each unused station gives +4 points at the end of the game.",
+    "scoreLongestPath": "Longest path",
+    "scoreLongestPathHint": "Player(s) with the longest continuous path gain +10 points.",
     "scoreTie": "Tie breaker",
     "scoreTieHint": "If points are equal, the player with more completed tickets ranks higher.",
     "scoreHistory": "Score history",

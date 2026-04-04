@@ -103,6 +103,8 @@ export type FinalStanding = {
   totalDestinations: number;
   destinationPointsDelta: number;
   stationPointsBonus: number;
+  longestPathLength: number;
+  longestPathBonus: number;
 };
 
 export type GameState = {

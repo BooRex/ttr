@@ -60,6 +60,47 @@ const canBuildAnyRoute = (state: GameState, player: Player): boolean => {
   return false;
 };
 
+const getLongestContinuousPathLength = (state: GameState, sessionToken: string): number => {
+  const owned = state.routes
+    .filter((route) => route.ownerSessionToken === sessionToken)
+    .map((route) => ({ id: route.id, from: route.from, to: route.to, length: route.length }));
+  if (owned.length === 0) return 0;
+
+  const adjacency = new Map<string, number[]>();
+  for (let i = 0; i < owned.length; i += 1) {
+    const edge = owned[i];
+    if (!adjacency.has(edge.from)) adjacency.set(edge.from, []);
+    if (!adjacency.has(edge.to)) adjacency.set(edge.to, []);
+    adjacency.get(edge.from)?.push(i);
+    adjacency.get(edge.to)?.push(i);
+  }
+
+  let best = 0;
+  const used = new Set<number>();
+  const totalLength = owned.reduce((sum, edge) => sum + edge.length, 0);
+
+  const dfs = (city: string, currentLength: number, remainingPotential: number): void => {
+    if (currentLength + remainingPotential <= best) return;
+    if (currentLength > best) best = currentLength;
+
+    const edgeIndexes = adjacency.get(city) ?? [];
+    for (const edgeIndex of edgeIndexes) {
+      if (used.has(edgeIndex)) continue;
+      used.add(edgeIndex);
+      const edge = owned[edgeIndex] as { from: string; to: string; length: number };
+      const nextCity = edge.from === city ? edge.to : edge.from;
+      dfs(nextCity, currentLength + edge.length, remainingPotential - edge.length);
+      used.delete(edgeIndex);
+    }
+  };
+
+  for (const city of adjacency.keys()) {
+    dfs(city, 0, totalLength);
+  }
+
+  return best;
+};
+
 const buildAdjacency = (state: GameState, sessionToken: string): Map<string, Set<string>> => {
   const adjacency = new Map<string, Set<string>>();
   for (const route of state.routes) {
@@ -554,6 +595,15 @@ export class GameEngine {
   private finalizeGame(state: GameState): void {
     if (state.finished) return;
 
+    const longestByPlayer = new Map<string, number>();
+    for (const player of state.players) {
+      longestByPlayer.set(
+        player.sessionToken,
+        getLongestContinuousPathLength(state, player.sessionToken),
+      );
+    }
+    const maxLongest = Math.max(0, ...Array.from(longestByPlayer.values()));
+
     const standingsWithMeta = state.players.map((player) => {
       const destinationScore = this.scoreDestinations(state, player.sessionToken, player.destinations);
       player.points += destinationScore.delta;
@@ -561,17 +611,22 @@ export class GameEngine {
       if (state.mapId === "europe") {
         player.points += stationPointsBonus;
       }
+      const longestPathLength = longestByPlayer.get(player.sessionToken) ?? 0;
+      const longestPathBonus = maxLongest > 0 && longestPathLength === maxLongest ? 10 : 0;
+      player.points += longestPathBonus;
       return {
         player,
         completedDestinations: destinationScore.completed,
         totalDestinations: player.destinations.length,
         destinationPointsDelta: destinationScore.delta,
         stationPointsBonus,
+        longestPathLength,
+        longestPathBonus,
       };
     });
 
     const finalStandings: FinalStanding[] = standingsWithMeta
-      .map(({ player, completedDestinations, totalDestinations, destinationPointsDelta, stationPointsBonus }) => ({
+      .map(({ player, completedDestinations, totalDestinations, destinationPointsDelta, stationPointsBonus, longestPathLength, longestPathBonus }) => ({
         sessionToken: player.sessionToken,
         nickname: player.nickname,
         points: player.points,
@@ -579,6 +634,8 @@ export class GameEngine {
         totalDestinations,
         destinationPointsDelta,
         stationPointsBonus,
+        longestPathLength,
+        longestPathBonus,
       }))
       .sort((a, b) => b.points - a.points || b.completedDestinations - a.completedDestinations || a.nickname.localeCompare(b.nickname));
 

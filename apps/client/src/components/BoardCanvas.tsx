@@ -137,7 +137,13 @@ export const BoardCanvas = ({
   const layout = MAP_LAYOUTS[mapId] ?? MAP_LAYOUTS.usa;
   const BOARD_W = layout.board.width;
   const BOARD_H = layout.board.height;
-  const CITY_POINTS = layout.cityPoints;
+  const CITY_POINTS = useMemo(() => {
+    const shifted: Record<string, Point> = {};
+    for (const [name, point] of Object.entries(layout.cityPoints)) {
+      shifted[name] = { ...point };
+    }
+    return shifted;
+  }, [layout.cityPoints]);
   const CITY_LABEL_OFFSETS = layout.cityLabelOffsets ?? {};
   const CITIES = Object.entries(CITY_POINTS);
   const highlightedRouteSet = useMemo(() => new Set(highlightRouteIds ?? []), [highlightRouteIds]);

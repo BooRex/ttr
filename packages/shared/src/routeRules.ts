@@ -4,8 +4,12 @@ export const getMinRequiredLocomotives = (_route: {
   routeType?: RouteType;
   ferryLocomotives?: number;
 }): number => {
-  // Ferries and tunnels are treated equally — no mandatory locomotive requirement.
-  // Locomotives can still be used as wildcards.
+  if (_route.routeType === "ferry") {
+    return Math.max(1, _route.ferryLocomotives ?? 1);
+  }
+  if (_route.routeType === "tunnel") {
+    return 1;
+  }
   return 0;
 };
 

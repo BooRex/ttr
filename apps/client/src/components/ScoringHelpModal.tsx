@@ -51,6 +51,14 @@ export const ScoringHelpModal = ({ open, lang, game, sessionToken, onClose }: Pr
         delta: myFinalStanding.stationPointsBonus,
       });
     }
+
+    if (myFinalStanding.longestPathBonus !== 0) {
+      scoreHistory.push({
+        id: `longest-path-${sessionToken}`,
+        label: `${t(lang, "ui.scoreLongestPath")}: ${myFinalStanding.longestPathLength}`,
+        delta: myFinalStanding.longestPathBonus,
+      });
+    }
   }
 
   let running = 0;
@@ -83,6 +91,7 @@ export const ScoringHelpModal = ({ open, lang, game, sessionToken, onClose }: Pr
         <div className="rounded-xl border border-slate-700 bg-slate-900/80 p-3 space-y-2 text-sm leading-5">
           <p><strong>{t(lang, "ui.scoreDestinations")}</strong> — {t(lang, "ui.scoreDestinationsHint")}</p>
           <p><strong>{t(lang, "ui.scoreStations")}</strong> — {t(lang, "ui.scoreStationsHint")}</p>
+          <p><strong>{t(lang, "ui.scoreLongestPath")}</strong> — {t(lang, "ui.scoreLongestPathHint")}</p>
           <p><strong>{t(lang, "ui.scoreTie")}</strong> — {t(lang, "ui.scoreTieHint")}</p>
         </div>
 
