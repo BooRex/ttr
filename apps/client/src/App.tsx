@@ -4,6 +4,7 @@ import { useAppStore } from "./store";
 import { useGameSession } from "./processes/game-session/useGameSession";
 import { ToastHost } from "./components/ToastHost";
 import { t } from "./lib/i18n";
+import { startKeepAlive } from "./lib/keepAlive";
 import { GAME_DEFAULTS } from "./lib/constants";
 import {
   useMediaQueries,
@@ -63,6 +64,11 @@ export const App = () => {
 
   useGameBodyLock(Boolean(game?.started));
 
+  // ── Keep-Alive: ping backend каждые 5 минут ─────────────────────────────
+  useEffect(() => {
+    startKeepAlive();
+  }, []);
+
   const selectedPendingDestinations = useMemo(() => {
     if (!gameLogic.pendingChoice || gameLogic.selectedDestinationIds.length === 0) return [];
     return gameLogic.pendingChoice.cards.filter((card) => gameLogic.selectedDestinationIds.includes(card.id));
@@ -92,14 +98,6 @@ export const App = () => {
   const inRoom = Boolean(game);
   const gameStarted = game?.started ?? false;
 
-  useEffect(() => {
-    if (!gameStarted) return;
-    const baseUrl = ((import.meta.env.VITE_SERVER_URL as string | undefined) ?? "http://localhost:3000").replace(/\/$/, "");
-    const timerId = window.setInterval(() => {
-      void fetch(`${baseUrl}/health`).catch(() => undefined);
-    }, 4 * 60 * 1000);
-    return () => window.clearInterval(timerId);
-  }, [gameStarted]);
 
   useEffect(() => {
     if (!gameLogic.pendingChoice) {
