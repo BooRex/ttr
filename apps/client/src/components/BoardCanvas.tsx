@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Circle, Group, Image as KonvaImage, Layer, Line, Rect, Stage, Text } from "react-konva";
 import type Konva from "konva";
-import type { Route } from "@ttr/shared";
+import type { Route, Station } from "@ttr/shared";
 import { PLAYER_COLORS, ROUTE_COLOR } from "../lib/colors";
 import { cityLabel, type Lang } from "../lib/i18n";
 import { MAP_LAYOUTS } from "../lib/mapLayouts";
@@ -10,12 +10,31 @@ type Point = { x: number; y: number };
 
 const PAN_MARGIN = 20;
 
-/** Compute Konva dash pattern so N wagon-slot segments fill the route exactly */
-const wagondash = (from: Point, to: Point, length: number): number[] => {
-  if (length <= 1) return []; // solid for length-1 routes
-  const dist = Math.hypot(to.x - from.x, to.y - from.y);
-  const slot = dist / length;
-  return [slot * 0.74, slot * 0.26];
+/** Build exact N rounded segments with equal segment lengths and equal gaps (incl. city-side gaps). */
+const buildRouteSegments = (linePoints: number[], length: number, gapToSegmentRatio = 0.65): number[][] => {
+  if (linePoints.length < 6 || length <= 0) return [];
+
+  const [x0, y0, cx, cy, x1, y1] = linePoints;
+  const pointAt = (t: number): Point => {
+    const mt = 1 - t;
+    return {
+      x: mt * mt * x0 + 2 * mt * t * cx + t * t * x1,
+      y: mt * mt * y0 + 2 * mt * t * cy + t * t * y1,
+    };
+  };
+
+  const ratio = Math.max(0.2, gapToSegmentRatio);
+  const segmentLen = 1 / (length + (length + 1) * ratio);
+  const gapLen = ratio * segmentLen;
+  const segments: number[][] = [];
+  for (let i = 0; i < length; i += 1) {
+    const segStart = gapLen + i * (segmentLen + gapLen);
+    const segEnd = segStart + segmentLen;
+    const a = pointAt(segStart);
+    const b = pointAt(segEnd);
+    segments.push([a.x, a.y, b.x, b.y]);
+  }
+  return segments;
 };
 
 const routeStroke = (route: Route, ownerIdx: number): string => {
@@ -46,7 +65,7 @@ const makeSegmentPoints = (
   offset: number,
   trimStart = 0,
   trimEnd = 0,
-): number[] => {
+): { linePoints: number[] } => {
   const dx = to.x - from.x;
   const dy = to.y - from.y;
   const dist = Math.hypot(dx, dy) || 1;
@@ -55,22 +74,35 @@ const makeSegmentPoints = (
   const px = -uy;
   const py = ux;
 
-  const startX = from.x + px * offset + ux * trimStart;
-  const startY = from.y + py * offset + uy * trimStart;
-  const endX = to.x + px * offset - ux * trimEnd;
-  const endY = to.y + py * offset - uy * trimEnd;
-  return [startX, startY, endX, endY];
+  const endpointOffset = offset * 0.35;
+  const startX = from.x + px * endpointOffset + ux * trimStart;
+  const startY = from.y + py * endpointOffset + uy * trimStart;
+  const endX = to.x + px * endpointOffset - ux * trimEnd;
+  const endY = to.y + py * endpointOffset - uy * trimEnd;
+
+  // Slightly stronger curve for readability; doubled routes bend away from each other.
+  const bend = offset === 0 ? 6.5 : Math.sign(offset) * (Math.abs(offset) * 0.7 + 4.5);
+  const midX = (startX + endX) / 2 + px * bend;
+  const midY = (startY + endY) / 2 + py * bend;
+
+  return {
+    linePoints: [startX, startY, midX, midY, endX, endY],
+  };
 };
+
 
 type Props = {
   mapId: string;
   lang: Lang;
   routes: Route[];
+  stations: Station[];
   players: { sessionToken: string }[];
   selectedRouteId: string;
   highlightOwnerSessionToken?: string | null;
   highlightRouteIds?: string[];
   highlightCityNames?: string[];
+  selectedStationCity?: string;
+  onSelectCity?: (city: string) => void;
   onSelectRoute: (routeId: string) => void;
 };
 
@@ -78,11 +110,14 @@ export const BoardCanvas = ({
   mapId,
   lang,
   routes,
+  stations,
   players,
   selectedRouteId,
   highlightOwnerSessionToken,
   highlightRouteIds,
   highlightCityNames,
+  selectedStationCity,
+  onSelectCity,
   onSelectRoute,
 }: Props) => {
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -239,7 +274,7 @@ export const BoardCanvas = ({
         .filter((candidate) => sameRoutePair(candidate, route))
         .sort((a, b) => a.id.localeCompare(b.id));
       const index = siblings.findIndex((candidate) => candidate.id === route.id);
-      const offset = siblings.length > 1 ? (index - (siblings.length - 1) / 2) * 14 : 0;
+      const offset = siblings.length > 1 ? (index - (siblings.length - 1) / 2) * 18 : 0;
       map.set(route.id, offset);
     }
     return map;
@@ -312,57 +347,100 @@ export const BoardCanvas = ({
             const isHovered   = route.id === hoveredId;
             const isOwned     = Boolean(route.ownerSessionToken);
             const stroke      = routeStroke(route, ownerIdx);
-            const dash        = wagondash(from, to, route.length);
             const routeOffset = parallelOffsets.get(route.id) ?? 0;
-            const points = makeSegmentPoints(
+            const geom = makeSegmentPoints(
               from,
               to,
               routeOffset,
-              !isOwned && route.length === 1 ? 11 : 0,
-              !isOwned && route.length === 1 ? 11 : 0,
+              9,
+              9,
             );
+            const points = geom.linePoints;
+            const segmentChunks = buildRouteSegments(points, route.length);
             const isFocusedByPlayer = Boolean(highlightOwnerSessionToken) && route.ownerSessionToken === highlightOwnerSessionToken;
             const isDimmedByPlayer = Boolean(highlightOwnerSessionToken) && route.ownerSessionToken !== highlightOwnerSessionToken;
             const isFocusedByDestination = highlightedRouteSet.has(route.id);
             const isRelatedToHighlightedCity = highlightedCitySet.has(route.from) || highlightedCitySet.has(route.to);
             const isClaimAnim = route.id === animRouteId;
+            const renderByChunks = !isOwned || isClaimAnim;
+            const baseStrokeWidth = isSelected ? 12 : isHovered || isFocusedByPlayer || isFocusedByDestination ? 10 : 7;
+            // Tunnel/ferry: light-blue inner border around each wagon segment
+            const isTunnelOrFerryUnowned = (route.routeType === "tunnel" || route.routeType === "ferry") && !isOwned;
+            const isWhiteUnowned = route.color === "white" && !isOwned;
+            // Inner colored stroke width (leaves border visible)
+            const innerTunnelStrokeWidth = Math.max(3, baseStrokeWidth - 4);
             const animProgress = isClaimAnim
               ? Math.max(0, Math.min((animNowMs - animStartMs.current) / 900, 1))
               : 0;
+            const routeOpacity =
+              isDimmedByPlayer
+                ? 0.18
+                : isClaimAnim
+                  ? 1 - animProgress * 0.75
+                  : isFocusedByDestination
+                    ? 1
+                    : isRelatedToHighlightedCity
+                      ? 0.90
+                      : isOwned
+                        ? 1
+                        : isHovered || isFocusedByPlayer
+                          ? 0.97
+                          : isWhiteUnowned
+                            ? 0.97
+                            : 0.75;
 
             return (
               <Group key={route.id}>
-                <Line
-                  points={points}
-                  stroke={stroke}
-                  strokeWidth={isSelected ? 12 : isHovered || isFocusedByPlayer || isFocusedByDestination ? 10 : 7}
-                  hitStrokeWidth={30}
-                  perfectDrawEnabled={false}
-                  lineCap="butt"
-                  lineJoin="round"
-                  dash={isOwned && !isClaimAnim ? [] : dash}
-                  opacity={
-                    isDimmedByPlayer
-                      ? 0.18
-                      : isClaimAnim
-                        ? 1 - animProgress * 0.75
-                        : isFocusedByDestination
-                          ? 1
-                          : isRelatedToHighlightedCity
-                            ? 0.88
-                        : isOwned
-                          ? 1
-                          : isHovered || isFocusedByPlayer
-                            ? 0.95
-                            : 0.72
-                  }
-                  shadowColor={isSelected ? "#fff" : isHovered || isFocusedByPlayer || isFocusedByDestination ? stroke : undefined}
-                  shadowBlur={isSelected ? 10 : isHovered || isFocusedByPlayer || isFocusedByDestination ? 8 : 0}
-                  onClick={() => onSelectRoute(route.id)}
-                  onTap={() => onSelectRoute(route.id)}
-                  onMouseEnter={() => setHovered(route.id)}
-                  onMouseLeave={() => setHovered(null)}
-                />
+                {/* Tunnel/ferry: outer cyan at same dash — stays inside wagon slots, forms inner border */}
+                {isTunnelOrFerryUnowned && (renderByChunks ? segmentChunks : [points]).map((chunk, idx) => (
+                  <Line
+                    key={`tunnel-border-${route.id}-${idx}`}
+                    points={chunk}
+                    stroke="#7dd3fc"
+                    strokeWidth={baseStrokeWidth}
+                    perfectDrawEnabled={false}
+                    lineCap="round"
+                    lineJoin="round"
+                    tension={chunk.length > 4 ? 0.42 : 0}
+                    opacity={isDimmedByPlayer ? 0.14 : isRelatedToHighlightedCity ? 0.9 : 0.84}
+                    listening={false}
+                  />
+                ))}
+                {/* White route: dark background for visibility on light board — respects player dimming */}
+                {isWhiteUnowned && (renderByChunks ? segmentChunks : [points]).map((chunk, idx) => (
+                  <Line
+                    key={`white-under-${route.id}-${idx}`}
+                    points={chunk}
+                    stroke="#0f172a"
+                    strokeWidth={(isTunnelOrFerryUnowned ? innerTunnelStrokeWidth : baseStrokeWidth) + 2}
+                    perfectDrawEnabled={false}
+                    lineCap="round"
+                    lineJoin="round"
+                    tension={chunk.length > 4 ? 0.42 : 0}
+                    opacity={isDimmedByPlayer ? 0.08 : 0.82}
+                    listening={false}
+                  />
+                ))}
+                {(renderByChunks ? segmentChunks : [points]).map((chunk, idx) => (
+                  <Line
+                    key={`route-main-${route.id}-${idx}`}
+                    points={chunk}
+                    stroke={stroke}
+                    strokeWidth={isTunnelOrFerryUnowned ? innerTunnelStrokeWidth : baseStrokeWidth}
+                    hitStrokeWidth={30}
+                    perfectDrawEnabled={false}
+                    lineCap="round"
+                    lineJoin="round"
+                    tension={chunk.length > 4 ? 0.42 : 0}
+                    opacity={routeOpacity}
+                    shadowColor={isSelected ? "#fff" : isHovered || isFocusedByPlayer || isFocusedByDestination ? stroke : undefined}
+                    shadowBlur={isSelected ? 10 : isHovered || isFocusedByPlayer || isFocusedByDestination ? 8 : 0}
+                    onClick={() => onSelectRoute(route.id)}
+                    onTap={() => onSelectRoute(route.id)}
+                    onMouseEnter={() => setHovered(route.id)}
+                    onMouseLeave={() => setHovered(null)}
+                  />
+                ))}
                 {isClaimAnim && (
                   <Line
                     points={points}
@@ -371,6 +449,7 @@ export const BoardCanvas = ({
                     perfectDrawEnabled={false}
                     lineCap="round"
                     lineJoin="round"
+                    tension={0.42}
                     opacity={0.25 + animProgress * 0.75}
                     shadowColor="#fff"
                     shadowBlur={8 + animProgress * 14}
@@ -383,28 +462,33 @@ export const BoardCanvas = ({
           })}
         </Layer>
 
-        <Layer listening={false}>
+        <Layer>
           {/* ── Cities — draw after routes so they're on top ── */}
           {CITIES.map(([name, pt]) => {
             const hot = hotCities.has(name);
+            const isStationSelected = selectedStationCity === name;
             return (
               <Circle
                 key={name}
                 x={pt.x}
                 y={pt.y}
-                radius={hot ? 9 : 6.5}
-                fill={hot ? "#fde047" : "#f8fafc"}
-                stroke={hot ? "#ca8a04" : "#0f172a"}
-                strokeWidth={hot ? 2.5 : 2}
-                shadowColor={hot ? "#fde047" : undefined}
-                shadowBlur={hot ? 12 : 0}
+                radius={isStationSelected ? 10 : hot ? 9.5 : 7.5}
+                fill={isStationSelected ? "#22d3ee" : hot ? "#fde047" : "#f8fafc"}
+                stroke={isStationSelected ? "#155e75" : hot ? "#ca8a04" : "#0f172a"}
+                strokeWidth={isStationSelected ? 2.8 : hot ? 2.5 : 2}
+                shadowColor={isStationSelected ? "#22d3ee" : hot ? "#fde047" : undefined}
+                shadowBlur={isStationSelected ? 10 : hot ? 12 : 0}
+                hitStrokeWidth={16}
+                onClick={() => onSelectCity?.(name)}
+                onTap={() => onSelectCity?.(name)}
               />
             );
           })}
+        </Layer>
 
+        <Layer listening={false}>
           {/* City labels */}
           {CITIES.map(([name, pt]) => {
-            const hot = hotCities.has(name);
             return (
               <Text
                 key={`${name}-lbl`}
@@ -412,12 +496,35 @@ export const BoardCanvas = ({
                 y={pt.y + (CITY_LABEL_OFFSETS[name]?.dy ?? -7)}
                 text={cityLabel(lang, name)}
                 fontSize={20}
+                fontFamily="Calibri"
                 fontStyle="bold"
                 fill="#000"
                 stroke="#fff"
-                strokeWidth={0.1}
+                strokeWidth={0.25}
                 perfectDrawEnabled={false}
               />
+            );
+          })}
+
+          {/* Stations */}
+          {stations.map((station, index) => {
+            const point = CITY_POINTS[station.city];
+            if (!point) return null;
+            const ownerIdx = players.findIndex((player) => player.sessionToken === station.ownerSessionToken);
+            const fill = PLAYER_COLORS[ownerIdx % PLAYER_COLORS.length] ?? "#f97316";
+            return (
+              <Group key={`${station.ownerSessionToken}-${station.city}-${index}`}>
+                <Rect
+                  x={point.x - 6}
+                  y={point.y - 18}
+                  width={12}
+                  height={12}
+                  cornerRadius={2}
+                  fill={fill}
+                  stroke="#e2e8f0"
+                  strokeWidth={1.2}
+                />
+              </Group>
             );
           })}
         </Layer>

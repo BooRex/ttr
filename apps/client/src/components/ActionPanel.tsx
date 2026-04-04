@@ -1,67 +1,17 @@
-import type { CardColor, DestinationCard, GameState, Player, TrainCard } from "@ttr/shared";
+import {
+  getMinRequiredLocomotives,
+  type CardColor,
+  type DestinationCard,
+  type GameState,
+  type Player,
+} from "@ttr/shared";
 import type { PendingDestinationChoice } from "@ttr/shared";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+import type { ReactNode } from "react";
 import { CARD_CFG, PLAYER_COLORS, ROUTE_COLOR } from "../lib/colors";
 import { cityLabel, t, type Lang } from "../lib/i18n";
-import { CardChip } from "./CardChip";
-
-// ── constants ──────────────────────────────────────────────────────────────
-
-const ALL_COLORS: CardColor[] = ["red","blue","green","yellow","black","white","orange","pink","locomotive"];
-
-// ── claim option types & helpers ───────────────────────────────────────────
-
-export type ClaimOpt = {
-  /** Color to send to server */
-  baseColor: CardColor;
-  /** How many baseColor cards will be deducted */
-  colorCount: number;
-  /** How many locomotive wildcards will be deducted */
-  locoCount: number;
-};
-
-/**
- * Returns one option per eligible base color.
- * Server logic: deduct colored cards first, fill remainder with locos.
- * Special: for gray routes, "locomotive" base = pure loco claim.
- */
-function buildClaimOptions(hand: TrainCard[], routeColor: string, routeLength: number): ClaimOpt[] {
-  const locoInHand = hand.filter(c => c.color === "locomotive").length;
-  const opts: ClaimOpt[] = [];
-
-  if (routeColor === "gray") {
-    for (const color of ALL_COLORS.filter(c => c !== "locomotive")) {
-      const colorInHand = hand.filter(c => c.color === color).length;
-      const minColor = Math.max(1, routeLength - locoInHand);
-      const maxColor = Math.min(routeLength, colorInHand);
-      for (let colorCount = maxColor; colorCount >= minColor; colorCount -= 1) {
-        const locoCount = routeLength - colorCount;
-        if (locoCount <= locoInHand) {
-          opts.push({ baseColor: color, colorCount, locoCount });
-        }
-      }
-    }
-    // Pure loco option for gray routes
-    if (locoInHand >= routeLength) {
-      opts.push({ baseColor: "locomotive", colorCount: 0, locoCount: routeLength });
-    }
-  } else {
-    const routeCardColor = routeColor as CardColor;
-    const colorInHand = hand.filter(c => c.color === routeCardColor).length;
-    const minColor = Math.max(0, routeLength - locoInHand);
-    const maxColor = Math.min(routeLength, colorInHand);
-    for (let colorCount = maxColor; colorCount >= minColor; colorCount -= 1) {
-      const locoCount = routeLength - colorCount;
-      if (locoCount <= locoInHand) {
-        opts.push({ baseColor: routeCardColor, colorCount, locoCount });
-      }
-    }
-  }
-
-  return opts.filter((opt, idx, arr) =>
-    arr.findIndex((x) => x.baseColor === opt.baseColor && x.locoCount === opt.locoCount) === idx,
-  );
-}
+import { buildClaimOptions, type ClaimOpt } from "../entities/game/claimOptions";
+import { CardStatIcon, LocomotiveStatIcon, RouteMapStatIcon, WagonStatIcon } from "./StatIcons";
 
 // ── sub-components ─────────────────────────────────────────────────────────
 
@@ -74,7 +24,7 @@ const MiniCard = ({ color }: { color: CardColor }) => {
   const cfg = CARD_CFG[color];
   return (
     <span
-      className="w-[22px] h-[30px] rounded-md flex items-center justify-center text-[13px] border flex-shrink-0 shadow-sm"
+      className="w-5.5 h-7.5 rounded-md flex items-center justify-center text-[13px] border shrink-0 shadow-sm"
       style={{
         background: cfg.gradient ?? cfg.bg,
         borderColor: cfg.border,
@@ -82,7 +32,7 @@ const MiniCard = ({ color }: { color: CardColor }) => {
         boxShadow: "inset 0 1px 1px rgba(255,255,255,0.2)",
       }}
     >
-      {cfg.icon}
+      {color === "locomotive" ? <LocomotiveStatIcon className="w-4 h-4" /> : cfg.icon}
     </span>
   );
 };
@@ -94,13 +44,11 @@ const ClaimOptionBtn = ({
   const baseCards = Array<CardColor>(opt.colorCount).fill(opt.baseColor);
   const locoCards = Array<CardColor>(opt.locoCount).fill("locomotive");
   const allCards = [...baseCards, ...locoCards];
-  const cfg = CARD_CFG[opt.baseColor];
-
   return (
     <button
       onClick={onClick}
       className={[
-        "flex items-center gap-3 rounded-xl border-2 px-3 py-2.5 w-full transition-all duration-100 text-left",
+        "flex items-center gap-2 rounded-xl border-2 px-2.5 py-2 w-full transition-all duration-100 text-left",
         "cursor-pointer active:scale-[0.98]",
         selected
           ? "border-orange-400 bg-orange-500/10 shadow-[0_0_0_1px_rgba(251,146,60,0.2)]"
@@ -108,18 +56,10 @@ const ClaimOptionBtn = ({
       ].join(" ")}
     >
       {/* Mini card preview */}
-      <div className="flex gap-1 flex-shrink-0">
+      <div className="flex flex-wrap gap-1 flex-1 min-w-0">
         {allCards.map((c, i) => <MiniCard key={i} color={c} />)}
       </div>
 
-      {/* Label */}
-      <span className="flex-1 text-sm font-medium" style={{ color: cfg.text === "#fff" ? cfg.border : cfg.text }}>
-        {opt.colorCount > 0 && opt.baseColor !== "locomotive"
-          ? `${opt.colorCount}×${cfg.icon}`
-          : ""}
-        {opt.colorCount > 0 && opt.locoCount > 0 ? " + " : ""}
-        {opt.locoCount > 0 ? `${opt.locoCount}×🚂` : ""}
-      </span>
 
       {selected && (
         <span className="text-orange-400 text-lg">✓</span>
@@ -131,25 +71,27 @@ const ClaimOptionBtn = ({
 const BigActionBtn = ({
   icon, label, sub, onClick, disabled, accent,
 }: {
-  icon: string; label: string; sub?: string;
+  icon: ReactNode; label: string; sub?: string;
   onClick: () => void; disabled?: boolean; accent?: boolean;
 }) => (
   <button
     onClick={onClick}
     disabled={disabled}
     className={[
-      "flex flex-col items-center justify-center gap-0.5 rounded-2xl border-2",
-      "px-3 py-3 font-semibold select-none transition-all duration-100",
-      "min-h-[68px] flex-1",
+      "flex items-center justify-between gap-2 rounded-2xl border-2",
+      "px-3 py-2.5 font-semibold select-none transition-all duration-100",
+      "min-h-17 flex-1",
       !disabled ? "cursor-pointer active:scale-95" : "cursor-default opacity-40",
       accent
         ? "bg-orange-500/20 border-orange-400 text-orange-300 shadow-[0_0_12px_rgba(249,115,22,.25)]"
         : "bg-slate-800/80 border-slate-600 text-slate-200 hover:border-slate-400",
     ].join(" ")}
   >
-    <span className="text-2xl leading-none">{icon}</span>
-    <span className="text-sm leading-tight text-center">{label}</span>
-    {sub && <span className="text-xs text-slate-400 leading-tight">{sub}</span>}
+    <span className="min-w-0 text-left">
+      <span className="block text-sm leading-tight">{label}</span>
+      {sub && <span className="block text-xs text-slate-400 leading-tight mt-0.5">{sub}</span>}
+    </span>
+    <span className="text-xl leading-none shrink-0">{icon}</span>
   </button>
 );
 
@@ -170,9 +112,9 @@ type Props = {
   isMyPendingChoice: boolean;
   selectedDestinationIds: string[];
   onToggleDestination: (id: string) => void;
+  onHoverPendingDestination: (card: DestinationCard | null) => void;
   onConfirmDestinations: () => void;
   onSelectClaim: (opt: ClaimOpt) => void;
-  onDrawCard: (index?: number) => void;
   onDrawDestinations: () => void;
   onClaimRoute: () => void;
   onDeselectRoute: () => void;
@@ -185,16 +127,18 @@ export const ActionPanel = ({
   isMyTurn, activePlayer,
   pendingChoice, isMyPendingChoice,
   selectedDestinationIds,
-  onToggleDestination, onConfirmDestinations,
-  onSelectClaim, onDrawCard, onDrawDestinations,
+  onToggleDestination, onHoverPendingDestination, onConfirmDestinations,
+  onSelectClaim, onDrawDestinations,
   onClaimRoute, onDeselectRoute,
 }: Props) => {
+  const [isDrawRoutesConfirmOpen, setIsDrawRoutesConfirmOpen] = useState(false);
   const selectedRoute = game.routes.find(r => r.id === selectedRouteId) ?? null;
   const hand = me?.hand ?? [];
   const routeClaimOpts = selectedRoute
-    ? buildClaimOptions(hand, selectedRoute.color, selectedRoute.length)
+    ? buildClaimOptions(hand, selectedRoute)
     : [];
   const drawInProgress = game.turnActionState.action === "draw_cards";
+  const canDrawDestinations = game.destinationDeckCount > 0 && !drawInProgress;
 
   // Keep selection valid when user switches route; defaults to first valid option.
   useEffect(() => {
@@ -206,10 +150,10 @@ export const ActionPanel = ({
   // ── Destination choice overlay ───────────────────────────────────────────
   if (pendingChoice) {
     return (
-      <div className="bg-[#10182c] border border-slate-700 rounded-2xl p-4">
-        <div className="flex items-center gap-2 mb-4">
-          <span className="text-lg">🗺</span>
-          <span className="font-semibold text-slate-100">
+      <div className="h-full flex flex-col gap-3 min-h-0">
+        <div className="rounded-xl border border-slate-700 bg-slate-800/70 px-3 py-2 flex items-center gap-2">
+          <RouteMapStatIcon className="w-4 h-4 text-slate-200" />
+          <span className="font-semibold text-slate-100 text-sm">
             {isMyPendingChoice
               ? t(lang, "ui.keepMinimum", { count: pendingChoice.minKeep })
               : t(lang, "ui.anotherPlayerChoosing")}
@@ -218,7 +162,7 @@ export const ActionPanel = ({
 
         {isMyPendingChoice && (
           <>
-            <div className="flex flex-col gap-2.5 mb-4">
+            <div className="pending-choice-list flex-1 min-h-0 flex flex-col gap-2.5">
               {pendingChoice.cards.map((card: DestinationCard) => {
                 const selected = selectedDestinationIds.includes(card.id);
                 return (
@@ -231,12 +175,16 @@ export const ActionPanel = ({
                         ? "border-orange-400 bg-orange-500/10"
                         : "border-slate-700 bg-slate-800/60",
                     ].join(" ")}
+                    onMouseEnter={() => onHoverPendingDestination(card)}
+                    onMouseLeave={() => onHoverPendingDestination(null)}
                   >
                     <input
                       type="checkbox"
                       checked={selected}
                       onChange={() => onToggleDestination(card.id)}
-                      className="w-4 h-4 accent-orange-400 flex-shrink-0"
+                      onFocus={() => onHoverPendingDestination(card)}
+                      onBlur={() => onHoverPendingDestination(null)}
+                      className="w-4 h-4 accent-orange-400 shrink-0"
                     />
                     <span className="flex-1 text-sm font-medium">
                       {cityLabel(lang, card.from)} <span className="text-slate-400">→</span> {cityLabel(lang, card.to)}
@@ -274,20 +222,22 @@ export const ActionPanel = ({
     const color = PLAYER_COLORS[playerIdx] ?? "#6b7280";
 
     return (
-      <div
-        className="rounded-2xl border-2 px-4 py-3 flex items-center gap-3"
-        style={{ borderColor: `${color}55`, background: `${color}11` }}
-      >
-        <span
-          className="w-3 h-3 rounded-full flex-shrink-0 animate-pulse"
-          style={{ background: color, boxShadow: `0 0 8px ${color}` }}
-        />
-        <span className="text-slate-300 text-sm">
-          {t(lang, "ui.waitingOtherTurn")}
-        </span>
-        <div className="ml-auto flex gap-2 text-xs text-slate-500">
-          <span>{activePlayer?.wagonsLeft ?? "—"}🚃</span>
-          <span>{activePlayer?.hand.length ?? "—"}🃏</span>
+      <div>
+        <div
+          className="rounded-2xl border-2 px-4 py-3 flex items-center gap-3"
+          style={{ borderColor: `${color}55`, background: `${color}11` }}
+        >
+          <span
+            className="w-3 h-3 rounded-full shrink-0 animate-pulse"
+            style={{ background: color, boxShadow: `0 0 8px ${color}` }}
+          />
+          <span className="text-slate-300 text-sm">
+            {t(lang, "ui.waitingOtherTurn")}
+          </span>
+          <div className="ml-auto flex gap-2 text-xs text-slate-500">
+            <span className="inline-flex items-center gap-1 font-bold">{activePlayer?.wagonsLeft ?? "—"}<WagonStatIcon /></span>
+            <span className="inline-flex items-center gap-1 font-bold">{activePlayer?.hand.length ?? "—"}<CardStatIcon /></span>
+          </div>
         </div>
       </div>
     );
@@ -298,6 +248,7 @@ export const ActionPanel = ({
     const routeColor = selectedRoute.ownerSessionToken
       ? undefined
       : ROUTE_COLOR[selectedRoute.color];
+    const minSpecialLocos = getMinRequiredLocomotives(selectedRoute);
 
     const claimOpts = selectedRoute.ownerSessionToken ? [] : routeClaimOpts;
 
@@ -309,7 +260,7 @@ export const ActionPanel = ({
         {/* Route info */}
         <div className="flex items-center gap-2">
           <div
-            className="w-3 h-3 rounded-full flex-shrink-0"
+            className="w-3 h-3 rounded-full shrink-0"
             style={{ background: routeColor ?? "#6b7280" }}
           />
           <span className="font-bold text-slate-100 text-sm">
@@ -322,6 +273,19 @@ export const ActionPanel = ({
             <span className="ml-auto text-xs px-2 py-0.5 rounded-full bg-green-900/40 text-green-300 border border-green-800">{t(lang, "ui.free")}</span>
           )}
         </div>
+
+        {(selectedRoute.routeType === "tunnel" || selectedRoute.routeType === "ferry") && (
+          <div className="rounded-xl border border-sky-400/50 bg-sky-500/10 px-3 py-2 text-xs text-sky-100">
+            <div className="font-semibold">
+              {selectedRoute.routeType === "tunnel" ? t(lang, "ui.tunnel") : t(lang, "ui.ferry")}
+            </div>
+            {minSpecialLocos > 0 && (
+              <div className="mt-0.5 text-sky-100/90">
+                {t(lang, "ui.minLocomotives", { count: minSpecialLocos })}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Claim options */}
         {!selectedRoute.ownerSessionToken && (
@@ -358,7 +322,7 @@ export const ActionPanel = ({
                   canClaim ? "active:scale-95 hover:bg-orange-500/30" : "",
                 ].join(" ")}
               >
-                🚂 {t(lang, "ui.claimRoute")}
+                <span className="inline-flex items-center justify-center gap-1"><LocomotiveStatIcon />{t(lang, "ui.claimRoute")}</span>
               </button>
               <button
                 onClick={onDeselectRoute}
@@ -386,52 +350,17 @@ export const ActionPanel = ({
   return (
     <div className="space-y-4">
 
-      {/* Market cards */}
-      <div>
-        <SectionLabel>{t(lang, "ui.marketTitle")}</SectionLabel>
-        <div className="flex gap-2 flex-wrap">
-          {game.openCards.map((card, i) => (
-            <CardChip
-              key={i}
-              color={card.color as CardColor}
-              size="md"
-              disabled={drawInProgress}
-              onClick={() => onDrawCard(i)}
-            />
-          ))}
-          {/* Draw from deck */}
-          <button
-            onClick={() => onDrawCard()}
-            disabled={game.trainDeckCount === 0}
-            className={[
-              "relative flex flex-col items-center justify-center",
-              "w-[46px] h-[66px] rounded-xl border-[3px] border-slate-600",
-              "bg-slate-800 text-slate-200 font-bold select-none",
-              "transition-all duration-100 cursor-pointer",
-              "active:scale-90 disabled:opacity-40 disabled:cursor-default",
-              "hover:border-slate-400",
-            ].join(" ")}
-            title={`${t(lang, "ui.drawDeck")} (${game.trainDeckCount})`}
-          >
-            <span className="text-xl leading-none z-10">🂠</span>
-            <span className="text-[11px] font-black absolute bottom-1 left-0 right-0 text-center leading-none opacity-90">
-              {game.trainDeckCount}
-            </span>
-          </button>
-        </div>
-      </div>
-
       {/* Other actions */}
-      <div className="flex gap-3">
+      <div className="flex flex-col gap-2.5">
         <BigActionBtn
-          icon="🗺"
+          icon={<RouteMapStatIcon className="w-5 h-5" />}
           label={t(lang, "ui.routes")}
           sub={`${game.destinationDeckCount} ${t(lang, "ui.deckCount")}`}
-          onClick={onDrawDestinations}
-          disabled={game.destinationDeckCount === 0 || drawInProgress}
+          onClick={() => setIsDrawRoutesConfirmOpen(true)}
+          disabled={!canDrawDestinations}
         />
         <BigActionBtn
-          icon="🚂"
+          icon={<LocomotiveStatIcon className="w-5 h-5" />}
           label={t(lang, "ui.claimRoute")}
           sub={t(lang, "ui.chooseOnMap")}
           onClick={() => {}}
@@ -443,6 +372,38 @@ export const ActionPanel = ({
       <p className="text-xs text-slate-500 text-center">
         💡 {t(lang, "ui.selectRouteHint")}
       </p>
+
+      {isDrawRoutesConfirmOpen && (
+        <div className="fixed inset-0 z-120 bg-black/65 backdrop-blur-[1px] flex items-center justify-center p-4">
+          <div className="w-full max-w-md rounded-2xl border border-slate-600 bg-slate-900 p-4 space-y-3 shadow-2xl">
+            <h3 className="text-sm font-bold text-slate-100">
+              {t(lang, "ui.drawRoutesConfirmTitle")}
+            </h3>
+            <p className="text-sm text-slate-300">
+              {t(lang, "ui.drawRoutesConfirmBody")}
+            </p>
+            <div className="flex gap-2 justify-end pt-1">
+              <button
+                type="button"
+                className="rounded-xl border border-slate-600 px-3 py-2 text-sm text-slate-300 hover:border-slate-400"
+                onClick={() => setIsDrawRoutesConfirmOpen(false)}
+              >
+                {t(lang, "ui.cancel")}
+              </button>
+              <button
+                type="button"
+                className="rounded-xl border border-orange-400 bg-orange-500/20 px-3 py-2 text-sm font-bold text-orange-200 hover:bg-orange-500/30"
+                onClick={() => {
+                  setIsDrawRoutesConfirmOpen(false);
+                  onDrawDestinations();
+                }}
+              >
+                {t(lang, "ui.confirm")}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

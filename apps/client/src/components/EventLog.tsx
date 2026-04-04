@@ -3,6 +3,7 @@ import { PLAYER_COLORS } from "../lib/colors";
 import { t, type Lang } from "../lib/i18n";
 import { toEventViewModel } from "../features/event-log/model/formatters";
 import { DestinationBadge } from "./DestinationBadge";
+import { LocomotiveStatIcon, RouteMapStatIcon } from "./StatIcons";
 
 type PlayerMeta = { sessionToken: string; nickname: string };
 
@@ -21,6 +22,16 @@ const PlayerName = ({ sessionToken, nickname, players }: { sessionToken: string;
   return <strong style={{ color }}>{nickname}</strong>;
 };
 
+const EventIcon = ({ icon }: { icon: string }) => {
+  if (icon === "loco_svg") {
+    return <LocomotiveStatIcon className="w-4 h-4 text-slate-200" />;
+  }
+  if (icon === "route_svg") {
+    return <RouteMapStatIcon className="w-4 h-4 text-slate-200" />;
+  }
+  return <span>{icon}</span>;
+};
+
 export const EventLog = ({ events, lang, players, limit, onHoverConnection, onLeaveConnection }: Props) => {
   const items = limit ? events.slice(0, limit) : events;
   const models = items.map((event) => toEventViewModel(lang, event));
@@ -29,14 +40,14 @@ export const EventLog = ({ events, lang, players, limit, onHoverConnection, onLe
     <ol className="event-log-rich">
       {models.map((model) => {
         if (!model.player && !model.winner) {
-          return <li key={model.id} className="event-entry">{model.icon} {model.message}</li>;
+          return <li key={model.id} className="event-entry"><EventIcon icon={model.icon} /> {model.message}</li>;
         }
 
 
         if (model.route) {
           return (
             <li key={model.id} className="event-entry event-entry-inline">
-              <span>{model.icon}</span>
+              <EventIcon icon={model.icon} />
               <PlayerName sessionToken={model.player?.sessionToken ?? ""} nickname={model.player?.nickname ?? ""} players={players} />
               <span>{model.message}</span>
               <DestinationBadge
@@ -54,7 +65,7 @@ export const EventLog = ({ events, lang, players, limit, onHoverConnection, onLe
         if (model.player) {
           return (
             <li key={model.id} className="event-entry event-entry-inline">
-              <span>{model.icon}</span>
+              <EventIcon icon={model.icon} />
               <PlayerName sessionToken={model.player.sessionToken} nickname={model.player.nickname} players={players} />
               <span>{model.message}</span>
             </li>
@@ -63,7 +74,7 @@ export const EventLog = ({ events, lang, players, limit, onHoverConnection, onLe
 
         return (
           <li key={model.id} className="event-entry event-entry-inline">
-            <span>{model.icon} {model.message}</span>
+            <span className="inline-flex items-center gap-1"><EventIcon icon={model.icon} />{model.message}</span>
             {model.winner && (
               <span>
                 · {t(lang, "events.winner")}: <PlayerName sessionToken={model.winner.sessionToken ?? ""} nickname={model.winner.nickname} players={players} />

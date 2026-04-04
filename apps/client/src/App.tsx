@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import type { DestinationCard } from "@ttr/shared";
 import { useAppStore } from "./store";
 import { useGameSession } from "./processes/game-session/useGameSession";
 import { ToastHost } from "./components/ToastHost";
@@ -14,7 +15,6 @@ import {
   useBoardHighlight,
   useLang,
   useHoverState,
-  useGameSelectors,
 } from "./hooks";
 import { LobbyScreen, WaitingRoomScreen, GameScreen, ResultsScreen } from "./screens";
 
@@ -39,6 +39,9 @@ export const App = () => {
   const [timer, setTimer] = useState<number>(GAME_DEFAULTS.TIMER_DEFAULT);
   const [mapId, setMapId] = useState<string>(GAME_DEFAULTS.MAP_DEFAULT);
   const [isEventsOpen, setIsEventsOpen] = useState(false);
+  const [isScoringHelpOpen, setIsScoringHelpOpen] = useState(false);
+  const [hoveredPendingDestination, setHoveredPendingDestination] = useState<DestinationCard | null>(null);
+  const [selectedStationCity, setSelectedStationCity] = useState("");
 
   // ── Hooks ──────────────────────────────────────────────────────────────────
   const { isMobileLayout, isPortrait } = useMediaQueries();
@@ -53,9 +56,6 @@ export const App = () => {
     setHighlightOwnerSessionToken,
   } = useHoverState();
 
-  // ── Game state selectors (мемоизированы)  ─────────────────────────────────
-  const gameSelectors = useGameSelectors(game, sessionToken);
-
   const activePlayer = game?.players[game.activePlayerIndex] ?? null;
   const { turnPulse } = useTurnPulse(activePlayer?.sessionToken, sessionToken);
   const { createRoom, joinRoom } = useLobbyLogic({ nickname, sessionToken });
@@ -63,7 +63,18 @@ export const App = () => {
 
   useGameBodyLock(Boolean(game?.started));
 
-  const boardHighlight = useBoardHighlight(game, sessionToken, hoveredDestination, hoveredConnection);
+  const selectedPendingDestinations = useMemo(() => {
+    if (!gameLogic.pendingChoice || gameLogic.selectedDestinationIds.length === 0) return [];
+    return gameLogic.pendingChoice.cards.filter((card) => gameLogic.selectedDestinationIds.includes(card.id));
+  }, [gameLogic.pendingChoice, gameLogic.selectedDestinationIds]);
+
+  const boardHighlight = useBoardHighlight(
+    game,
+    sessionToken,
+    hoveredPendingDestination ?? hoveredDestination,
+    hoveredConnection,
+    selectedPendingDestinations,
+  );
 
   // ── Game session setup ─────────────────────────────────────────────────────
   useGameSession({
@@ -88,6 +99,18 @@ export const App = () => {
       void fetch(`${baseUrl}/health`).catch(() => undefined);
     }, 4 * 60 * 1000);
     return () => window.clearInterval(timerId);
+  }, [gameStarted]);
+
+  useEffect(() => {
+    if (!gameLogic.pendingChoice) {
+      setHoveredPendingDestination(null);
+    }
+  }, [gameLogic.pendingChoice]);
+
+  useEffect(() => {
+    if (!gameStarted) {
+      setSelectedStationCity("");
+    }
   }, [gameStarted]);
 
   const handleExitGame = () => {
@@ -155,6 +178,8 @@ export const App = () => {
           isPortrait={isPortrait}
           isEventsOpen={isEventsOpen}
           onToggleEvents={() => setIsEventsOpen((c) => !c)}
+          isScoringHelpOpen={isScoringHelpOpen}
+          onToggleScoringHelp={() => setIsScoringHelpOpen((c) => !c)}
           me={gameLogic.me}
           activePlayer={gameLogic.activePlayer}
           winner={gameLogic.winner}
@@ -170,6 +195,7 @@ export const App = () => {
               c.includes(id) ? c.filter((x) => x !== id) : [...c, id],
             )
           }
+          onHoverPendingDestination={setHoveredPendingDestination}
           highlightOwnerSessionToken={highlightOwnerSessionToken}
           onHoverOwner={setHighlightOwnerSessionToken}
           onToggleOwner={(token) =>
@@ -177,13 +203,14 @@ export const App = () => {
           }
           highlightRouteIds={boardHighlight.routeIds}
           highlightCityNames={boardHighlight.cityNames}
-          hoveredDestination={hoveredDestination}
           onHoverDestination={setHoveredDestination}
-          hoveredConnection={hoveredConnection}
           onHoverConnection={(from, to) => setHoveredConnection({ from, to })}
           onLeaveConnection={() => setHoveredConnection(null)}
           onDrawCard={gameLogic.drawCardFrom}
           onClaimRoute={gameLogic.claimRoute}
+          onBuildStation={gameLogic.buildStation}
+          selectedStationCity={selectedStationCity}
+          onSelectStationCity={setSelectedStationCity}
           onSelectClaim={(opt) => gameLogic.onSelectClaim(opt.baseColor, opt.locoCount)}
           onDrawDestinations={gameLogic.drawDestinations}
           onConfirmDestinations={gameLogic.confirmDestinations}

@@ -31,7 +31,7 @@ export const toEventViewModel = (lang: Lang, event: GameEvent): EventViewModel =
   if (event.type === "draw_destinations") {
     return {
       id: event.id,
-      icon: "🗺",
+      icon: "route_svg",
       player: { sessionToken: event.sessionToken, nickname: event.nickname },
       message: t(lang, "events.drawDestinations"),
     };
@@ -49,10 +49,19 @@ export const toEventViewModel = (lang: Lang, event: GameEvent): EventViewModel =
   if (event.type === "claim_route") {
     return {
       id: event.id,
-      icon: "🚂",
+      icon: "loco_svg",
       player: { sessionToken: event.sessionToken, nickname: event.nickname },
-      message: t(lang, "events.claimRoute"),
+      message: `${t(lang, "events.claimRoute")}${event.points ? ` +${event.points}🎯` : ""}`,
       route: { from: event.from, to: event.to },
+    };
+  }
+
+  if (event.type === "build_station") {
+    return {
+      id: event.id,
+      icon: "🏛",
+      player: { sessionToken: event.sessionToken, nickname: event.nickname },
+      message: t(lang, "events.buildStation", { city: event.city }),
     };
   }
 

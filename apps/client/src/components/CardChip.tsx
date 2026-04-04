@@ -1,12 +1,14 @@
 import type { CardColor } from "@ttr/shared";
 import { CARD_CFG } from "../lib/colors";
+import { LocomotiveStatIcon } from "./StatIcons";
 
-type Size = "sm" | "md" | "lg";
+type Size = "sm" | "md" | "lg" | "panel";
 
 const SIZE: Record<Size, { w: string; h: string; icon: string; count: string }> = {
-  sm: { w: "w-9",     h: "h-12",      icon: "text-xl",  count: "text-[9px]"  },
-  md: { w: "w-[52px]",h: "h-[66px]",  icon: "text-2xl", count: "text-[11px]" },
-  lg: { w: "w-14",    h: "h-[76px]",  icon: "text-3xl", count: "text-xs"     },
+  sm: { w: "w-8",  h: "h-12", icon: "text-lg",  count: "text-[8px]"  },
+  md: { w: "w-10", h: "h-15", icon: "text-xl",  count: "text-[10px]" },
+  lg: { w: "w-12", h: "h-18", icon: "text-2xl", count: "text-[11px]" },
+  panel: { w: "w-full", h: "h-full", icon: "text-2xl", count: "text-[11px]" },
 };
 
 type Props = {
@@ -18,10 +20,12 @@ type Props = {
   selected?: boolean;
   /** Dim card but show it exists */
   dimmed?: boolean;
+  /** Fill the full width of its container (for grid layouts) */
+  fluid?: boolean;
 };
 
 export const CardChip = ({
-  color, count, size = "md", onClick, disabled, selected, dimmed,
+  color, count, size = "md", onClick, disabled, selected, dimmed, fluid,
 }: Props) => {
   const cfg = CARD_CFG[color];
   const s   = SIZE[size];
@@ -35,7 +39,7 @@ export const CardChip = ({
       title={color}
       className={[
         // fixed size — always rectangular, same proportions
-        s.w, s.h,
+        fluid ? "w-full" : s.w, s.h,
         "relative flex items-center justify-center",
         "rounded-xl border-[3px] font-bold select-none",
         "transition-all duration-100",
@@ -67,17 +71,16 @@ export const CardChip = ({
 
       {/* Icon — always centered in the card */}
       <span aria-hidden="true" className={`${s.icon} leading-none z-10`}>
-        {cfg.icon}
+        {isLoco ? <LocomotiveStatIcon className="w-6 h-6" /> : cfg.icon}
       </span>
 
-      {/* Count — absolute bottom center */}
+      {/* Count badge — bottom-right corner */}
       {count !== undefined && (
         <span
           aria-hidden="true"
-          className={`${s.count} font-black tabular-nums absolute bottom-1 left-0 right-0 text-center leading-none`}
-          style={{ opacity: 0.9 }}
+          className={`text-[10px] font-black tabular-nums absolute bottom-0.5 right-0.5 rounded-full w-5 h-5 inline-flex items-center justify-center leading-none bg-slate-800 text-white border border-slate-500/60 z-50`}
         >
-          ×{count}
+          {count}
         </span>
       )}
     </button>

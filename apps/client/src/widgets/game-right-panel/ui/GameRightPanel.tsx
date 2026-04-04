@@ -2,6 +2,7 @@ import type { DestinationCard, GameState, Player } from "@ttr/shared";
 import { HandCards } from "../../../components/HandCards";
 import { DestinationBadge } from "../../../components/DestinationBadge";
 import { EventLog } from "../../../components/EventLog";
+import { PanelShell } from "../../../components/PanelShell";
 import { t, type Lang } from "../../../lib/i18n";
 
 type Props = {
@@ -27,18 +28,26 @@ export const GameRightPanel = ({
   onLeaveConnection,
   onBackToLobby,
 }: Props) => {
+  const destinations = me?.destinations ?? [];
+
   return (
     <aside className="game-side side-right">
       {me && !me.isSpectator && (
-        <div className="player-hand card side-card right-half">
-          <div className="row" style={{ justifyContent: "space-between" }}>
-            <strong>{t(lang, "ui.yourCards")}</strong>
-            <span className="hint">{me.wagonsLeft} {t(lang, "ui.wagons")} · {me.points} {t(lang, "ui.pointsShort")}</span>
-          </div>
-          <HandCards cards={me.hand} compact />
-          {me.destinations.length > 0 && (
-            <div className="my-destinations">
-              {me.destinations.map((d) => (
+        <PanelShell title={t(lang, "ui.yourCards")} className="player-hand card side-card side-ratio-eq">
+          <HandCards cards={me.hand} />
+        </PanelShell>
+      )}
+
+      {me && !me.isSpectator && (
+        <PanelShell
+          title={t(lang, "ui.yourRoutes")}
+          className="scoreboard card side-card side-ratio-eq"
+        >
+          {destinations.length === 0 ? (
+            <p className="hint">—</p>
+          ) : (
+            <div className="my-destinations my-destinations-vertical">
+              {destinations.map((d) => (
                 <DestinationBadge
                   key={d.id}
                   card={d}
@@ -49,21 +58,21 @@ export const GameRightPanel = ({
               ))}
             </div>
           )}
-        </div>
+        </PanelShell>
       )}
 
-      <div className="scoreboard card side-card desktop-events right-half">
-        <h3>{t(lang, "ui.events")}</h3>
-        <div className="events-scroll-area">
-          <EventLog
-            events={game.events ?? []}
-            players={game.players}
-            lang={lang}
-            onHoverConnection={onHoverConnection}
-            onLeaveConnection={onLeaveConnection}
-          />
-        </div>
-      </div>
+      <PanelShell
+        title={t(lang, "ui.events")}
+        className="scoreboard card side-card desktop-events side-ratio-eq"
+      >
+        <EventLog
+          events={game.events ?? []}
+          players={game.players}
+          lang={lang}
+          onHoverConnection={onHoverConnection}
+          onLeaveConnection={onLeaveConnection}
+        />
+      </PanelShell>
 
       {game.finished && (
         <div className="game-over card side-card">

@@ -3,6 +3,7 @@ import { MAPS } from "@ttr/shared";
 import { socket } from "../socket";
 import { t, type Lang } from "../lib/i18n";
 import { GAME_DEFAULTS, SOCKET_EVENTS } from "../lib/constants";
+import { LocomotiveStatIcon } from "../components/StatIcons";
 
 interface LobbyScreenProps {
   nickname: string;
@@ -35,7 +36,7 @@ const LobbyScreenComponent = ({
 }: LobbyScreenProps) => {
   return (
     <>
-      <h1>🚂 Ticket to Ride</h1>
+      <h1><span className="inline-flex items-center gap-2"><LocomotiveStatIcon className="w-6 h-6" />Ticket to Ride</span></h1>
 
       {/* Profile */}
       <section className="card">

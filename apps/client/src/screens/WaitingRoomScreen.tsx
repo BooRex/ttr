@@ -3,6 +3,7 @@ import { MAPS } from "@ttr/shared";
 import type { GameState } from "@ttr/shared";
 import { PLAYER_COLORS } from "../lib/colors";
 import { t, type Lang } from "../lib/i18n";
+import { LocomotiveStatIcon } from "../components/StatIcons";
 
 interface WaitingRoomScreenProps {
   game: GameState;
@@ -49,7 +50,7 @@ const WaitingRoomScreenComponent = ({
         onClick={onStartGame}
         disabled={game.players.length < 2}
       >
-        🚂 {t(lang, "ui.startGame")}
+        <span className="inline-flex items-center gap-1"><LocomotiveStatIcon />{t(lang, "ui.startGame")}</span>
       </button>
     </section>
   );

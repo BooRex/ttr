@@ -17,7 +17,7 @@ export const CARD_CFG: Record<
     bg: "#4c1d95",
     text: "#f0f9ff",
     border: "#c4b5fd",
-    icon: "🚂",
+    icon: "◆",
     gradient: "linear-gradient(135deg,#7c3aed 0%,#1d4ed8 55%,#0891b2 100%)",
   },
 };
@@ -28,11 +28,11 @@ export const ROUTE_COLOR: Record<string, string> = {
   blue:  "#3b82f6",
   green: "#22c55e",
   yellow:"#facc15",
-  black: "#374151",
-  white: "#e2e8f0",
+  black: "#0b0f14",
+  white: "#ffffff",
   orange:"#f97316",
   pink:  "#ec4899",
-  gray:  "#6b7280",
+  gray:  "#9ca3af",
 };
 
 /** Colors assigned to each player seat (0-indexed) */

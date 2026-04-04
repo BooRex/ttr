@@ -1,6 +1,7 @@
 import type { GameState } from "@ttr/shared";
 import { PLAYER_COLORS } from "../../../lib/colors";
 import { t, type Lang } from "../../../lib/i18n";
+import { PlayerPillMeta } from "../../../components/PlayerPillMeta";
 
 type Props = {
   game: GameState;
@@ -12,6 +13,7 @@ type Props = {
   onHoverOwner: (sessionToken: string | null) => void;
   onToggleOwner: (sessionToken: string) => void;
   onSetLang: (lang: Lang) => void;
+  onOpenScoringHelp: () => void;
 };
 
 export const GameTopbar = ({
@@ -24,6 +26,7 @@ export const GameTopbar = ({
   onHoverOwner,
   onToggleOwner,
   onSetLang,
+  onOpenScoringHelp,
 }: Props) => {
   const activePlayer = game.players[game.activePlayerIndex];
 
@@ -43,10 +46,18 @@ export const GameTopbar = ({
           const isActive = idx === game.activePlayerIndex && !game.finished;
           const isMe = player.sessionToken === sessionToken;
           const isHighlighted = highlightOwnerSessionToken === player.sessionToken;
+          const pillStyle = isActive
+            ? {
+                borderColor: `${color}cc`,
+                background: `${color}22`,
+                boxShadow: `0 0 0 1px ${color}55`,
+              }
+            : undefined;
           return (
             <button
               key={player.sessionToken}
               className={["player-pill", isActive ? "active" : "", isHighlighted ? "highlighted" : ""].join(" ")}
+              style={pillStyle}
               onMouseEnter={() => onHoverOwner(player.sessionToken)}
               onMouseLeave={() => onHoverOwner(null)}
               onClick={() => onToggleOwner(player.sessionToken)}
@@ -62,15 +73,12 @@ export const GameTopbar = ({
                 style={{
                   background: color,
                   borderColor: isActive ? "rgba(255,255,255,0.8)" : `${color}60`,
-                  boxShadow: isActive ? `0 0 10px ${color}, 0 0 20px ${color}55` : "none",
                   color: idx === 3 ? "#111827" : "#fff",
                 }}
               >
                 {isMe ? "★" : String(idx + 1)}
               </div>
-              <span className="player-pill-meta">
-                {player.points}{t(lang, "ui.pointsShort")} · {player.wagonsLeft}🚃 · {player.hand.length}🃏
-              </span>
+              <PlayerPillMeta player={player} lang={lang} hidePoints={!isMe} />
             </button>
           );
         })}
@@ -83,6 +91,14 @@ export const GameTopbar = ({
           ))}
         </select>
       </label>
+
+      <button
+        type="button"
+        className="topbar-control text-xs rounded-xl border border-[#64748b] bg-[#1e293b] text-slate-200"
+        onClick={onOpenScoringHelp}
+      >
+        {t(lang, "ui.scoreHelp")}
+      </button>
     </div>
   );
 };

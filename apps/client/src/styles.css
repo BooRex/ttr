@@ -51,13 +51,32 @@ ul, ol { padding-left: 18px; }
 }
 
 .lang-select-wrap select {
-  width: 54px;
-  min-width: 54px;
-  height: 40px;
-  min-height: 40px;
-  padding: 0 8px;
-  border-radius: 10px;
+  width: 50px;
+  min-width: 50px;
+  height: 34px;
+  min-height: 34px;
+  padding: 0;
+  border-radius: 12px;
   text-align: center;
+  border: 1px solid #64748b;
+  background: #1e293b;
+  color: #e2e8f0;
+  font-weight: 700;
+}
+
+.topbar-control {
+  height: 34px;
+  min-height: 34px;
+  padding: 0 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.lang-select-wrap select:focus {
+  outline: none;
+  border-color: #60a5fa;
+  box-shadow: 0 0 0 2px rgba(96, 165, 250, 0.3);
 }
 
 .page.page-game {
@@ -73,6 +92,50 @@ body.game-scroll-lock {
 }
 
 .hint { color: var(--muted); font-size: 0.875rem; }
+
+.panel-shell {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  height: 100%;
+}
+
+.panel-shell-header {
+  height: 30px;
+  min-height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.panel-shell-title {
+  margin: 0;
+  font-size: 0.78rem;
+  line-height: 1;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-weight: 700;
+  color: #94a3b8;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.panel-shell-header-right {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+}
+
+.panel-shell-content {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-right: 4px;
+}
 
 /* ── Card surface ─────────────────────────────────────────────────────────── */
 .card {
@@ -166,6 +229,31 @@ button:not(:disabled):active { opacity: 0.7; }
   overflow-y: auto;
 }
 
+.side-half {
+  flex: 1;
+  min-height: 0;
+}
+
+.side-third {
+  flex: 1;
+  min-height: 0;
+}
+
+.side-ratio-1 {
+  flex: 2;
+  min-height: 0;
+}
+
+.side-ratio-2 {
+  flex: 3;
+  min-height: 0;
+}
+
+.side-ratio-eq {
+  flex: 1;
+  min-height: 0;
+}
+
 .right-half {
   flex: 1;
   min-height: 0;
@@ -189,12 +277,46 @@ button:not(:disabled):active { opacity: 0.7; }
   overflow: hidden;
 }
 
+/* ── Board + Market column ────────────────────────────────────────────────── */
+.board-center-col {
+  min-height: 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  overflow: hidden;
+}
+
+.board-center-col > .board-slot {
+  flex: 1;
+  min-height: 0;
+}
+
+.market-strip {
+  flex-shrink: 0;
+  padding: 10px 12px;
+  min-height: 100px;
+  margin-bottom: 0;
+}
+
+.player-hand .panel-shell-content {
+  display: flex;
+  overflow: hidden;
+  padding-right: 0;
+}
+
+.player-hand .panel-shell-content > * {
+  flex: 1;
+  min-height: 0;
+}
+
 .board-square {
-  width: 100%;
-  height: 100%;
+  width: 96%;
+  height: 96%;
   max-height: 100%;
   max-width: 100%;
   aspect-ratio: 1 / 1;
+  margin: auto;
 }
 
 .board-square .board-card {
@@ -250,10 +372,65 @@ button:not(:disabled):active { opacity: 0.7; }
   overflow: hidden;
 }
 
+.station-panel-options {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.pending-choice-list {
+  max-height: min(34vh, 280px);
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
 .player-pill-meta {
   font-size: 0.72rem;
   color: #94a3b8;
   white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-weight: 800;
+}
+
+.player-pill-meta.hint {
+  display: inline-flex;
+  align-items: center;
+  height: 100%;
+  margin: 0;
+}
+
+.meta-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 6px;
+  border-radius: 999px;
+  border: 1px solid #475569;
+  background: #111827;
+}
+
+.meta-value {
+  font-weight: 900;
+  color: #e2e8f0;
+}
+
+.meta-sep {
+  font-weight: 900;
+  color: #64748b;
+}
+
+.meta-icon {
+  width: 14px;
+  height: 14px;
+  color: #f8fafc;
+  opacity: 0.98;
+  filter: drop-shadow(0 0 1px rgba(15, 23, 42, 0.8));
 }
 
 .turn-pulse {
@@ -284,7 +461,7 @@ button:not(:disabled):active { opacity: 0.7; }
   border: 1px solid #334155;
   border-radius: 10px;
   overflow: hidden;
-  background: #0a1120;
+  background: #daf0fd;
   touch-action: none; /* prevent browser scroll while panning */
 }
 
@@ -392,6 +569,17 @@ button:not(:disabled):active { opacity: 0.7; }
   gap: 5px;
   margin-top: 6px;
 }
+
+.my-destinations-vertical {
+  flex-direction: column;
+  flex-wrap: nowrap;
+  width: 100%;
+}
+
+.my-destinations-vertical .dest-badge {
+  width: 100%;
+  justify-content: flex-start;
+}
 .dest-badge {
   display: inline-flex;
   align-items: center;
@@ -466,7 +654,8 @@ button:not(:disabled):active { opacity: 0.7; }
 
 .event-log-rich {
   margin: 0;
-  padding-left: 18px;
+  padding: 0;
+  list-style: none;
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -475,6 +664,13 @@ button:not(:disabled):active { opacity: 0.7; }
 }
 
 .events-scroll-area {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.routes-scroll-area {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
@@ -526,6 +722,62 @@ button:not(:disabled):active { opacity: 0.7; }
   overflow-y: auto;
   color: #cbd5e1;
   margin: 0;
+}
+
+/* ── Custom scrollbar ───────────────────────────────────────────────────── */
+.panel-shell-content,
+.event-log,
+.event-log-rich,
+.events-scroll-area,
+.pending-choice-list,
+.station-panel-options,
+.routes-scroll-area {
+  scrollbar-width: thin;
+  scrollbar-color: #64748b #0f172a;
+}
+
+.panel-shell-content::-webkit-scrollbar,
+.event-log::-webkit-scrollbar,
+.event-log-rich::-webkit-scrollbar,
+.events-scroll-area::-webkit-scrollbar,
+.pending-choice-list::-webkit-scrollbar,
+.station-panel-options::-webkit-scrollbar,
+.routes-scroll-area::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+.panel-shell-content::-webkit-scrollbar-track,
+.event-log::-webkit-scrollbar-track,
+.event-log-rich::-webkit-scrollbar-track,
+.events-scroll-area::-webkit-scrollbar-track,
+.pending-choice-list::-webkit-scrollbar-track,
+.station-panel-options::-webkit-scrollbar-track,
+.routes-scroll-area::-webkit-scrollbar-track {
+  background: #0f172a;
+  border-radius: 999px;
+}
+
+.panel-shell-content::-webkit-scrollbar-thumb,
+.event-log::-webkit-scrollbar-thumb,
+.event-log-rich::-webkit-scrollbar-thumb,
+.events-scroll-area::-webkit-scrollbar-thumb,
+.pending-choice-list::-webkit-scrollbar-thumb,
+.station-panel-options::-webkit-scrollbar-thumb,
+.routes-scroll-area::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #64748b, #475569);
+  border-radius: 999px;
+  border: 2px solid #0f172a;
+}
+
+.panel-shell-content::-webkit-scrollbar-thumb:hover,
+.event-log::-webkit-scrollbar-thumb:hover,
+.event-log-rich::-webkit-scrollbar-thumb:hover,
+.events-scroll-area::-webkit-scrollbar-thumb:hover,
+.pending-choice-list::-webkit-scrollbar-thumb:hover,
+.station-panel-options::-webkit-scrollbar-thumb:hover,
+.routes-scroll-area::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, #94a3b8, #64748b);
 }
 
 /* ── Orientation lock overlay ────────────────────────────────────────────── */
