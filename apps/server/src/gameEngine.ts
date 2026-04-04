@@ -2,6 +2,8 @@ import {
   type CardColor,
   type FinalStanding,
   type GameEvent,
+  getMinRequiredLocomotives,
+  getStationBuildCost,
   MAPS,
   pointsForRouteLength,
   TRAIN_COLORS,
@@ -110,6 +112,7 @@ export class GameEngine {
       return {
         ...p,
         wagonsLeft: 45,
+        stationsLeft: map.id === "europe" ? 3 : 0,
         hand,
         destinations,
         points: 0
@@ -125,6 +128,7 @@ export class GameEngine {
       started: true,
       finished: false,
       routes: map.routes.map((route) => ({ ...route })),
+      stations: [],
       players: seededPlayers,
       spectators: [],
       activePlayerIndex: 0,
@@ -302,40 +306,21 @@ export class GameEngine {
         route.length,
       ))));
 
-    const tunnelReveal: TrainCard[] = route.routeType === "tunnel" ? this.revealTunnelCards(3) : [];
-    const tunnelExtra = route.routeType === "tunnel"
-      ? tunnelReveal.filter((card) => (
-        neededColor === "locomotive"
-          ? card.color === "locomotive"
-          : card.color === neededColor || card.color === "locomotive"
-      )).length
-      : 0;
-
-    if (route.routeType === "ferry") {
-      const requiredLocos = Math.max(1, route.ferryLocomotives ?? 1);
-      if (requestedLoco < requiredLocos) {
-        throw new Error(`Для парома нужно минимум ${requiredLocos} локомотив(а)`);
-      }
+    const minRequiredLocos = getMinRequiredLocomotives(route);
+    if (requestedLoco < minRequiredLocos) {
+      throw new Error(`Для этого маршрута нужно минимум ${minRequiredLocos} локомотив(а)`);
     }
 
-    const totalRequired = route.length + tunnelExtra;
     const colorAvailable = neededColor === "locomotive"
       ? 0
       : activePlayer.hand.filter((c) => c.color === neededColor).length;
     const locoAvailable = activePlayer.hand.filter((c) => c.color === "locomotive").length;
 
     let needColorCards = neededColor === "locomotive" ? 0 : (route.length - requestedLoco);
-    let needLocoCards = neededColor === "locomotive" ? totalRequired : requestedLoco;
-
-    if (neededColor !== "locomotive" && tunnelExtra > 0) {
-      const colorReserve = Math.max(0, colorAvailable - needColorCards);
-      const payWithColor = Math.min(tunnelExtra, colorReserve);
-      needColorCards += payWithColor;
-      needLocoCards += tunnelExtra - payWithColor;
-    }
+    let needLocoCards = neededColor === "locomotive" ? route.length : requestedLoco;
 
     if (needColorCards > colorAvailable || needLocoCards > locoAvailable) {
-      throw new Error("Недостаточно карт для оплаты туннеля");
+      throw new Error("Недостаточно карт");
     }
 
     const newHand: TrainCard[] = [];
@@ -357,10 +342,6 @@ export class GameEngine {
     }
     activePlayer.hand = newHand;
 
-    if (tunnelReveal.length > 0) {
-      state.log.unshift(`${activePlayer.nickname} проверил туннель: +${tunnelExtra} (${tunnelReveal.map((c) => c.color).join(", ")})`);
-    }
-
     route.ownerSessionToken = activePlayer.sessionToken;
     activePlayer.wagonsLeft -= route.length;
     activePlayer.points += pointsForRouteLength(route.length);
@@ -374,6 +355,7 @@ export class GameEngine {
       routeId: route.id,
       from: route.from,
       to: route.to,
+      points: pointsForRouteLength(route.length),
     });
     if (!state.lastRoundTriggered && activePlayer.wagonsLeft <= 2) {
       state.lastRoundTriggered = true;
@@ -387,6 +369,111 @@ export class GameEngine {
         wagonsLeft: activePlayer.wagonsLeft,
       });
     }
+
+    this.finishTurnAndMaybeEndGame(state);
+    this.syncDeckCounts(state);
+    return state;
+  }
+
+  buildStation(
+    state: GameState,
+    playerToken: string,
+    city: string,
+    color: CardColor,
+    useLocomotives?: number,
+  ): GameState {
+    this.assertGameInProgress(state);
+    if (state.pendingDestinationChoice) throw new Error("Сначала выберите карты маршрутов");
+    if (state.mapId !== "europe") throw new Error("Станции доступны только на карте Europe");
+
+    const activePlayer = state.players[state.activePlayerIndex];
+    if (!activePlayer || activePlayer.sessionToken !== playerToken) {
+      throw new Error("Сейчас не ваш ход");
+    }
+    if (state.turnActionState.action) {
+      throw new Error("В этом ходу уже выбрано другое действие");
+    }
+    state.turnActionState.action = "build_station";
+
+    const stationsLeft = activePlayer.stationsLeft ?? 0;
+    if (stationsLeft <= 0) {
+      throw new Error("У вас не осталось станций");
+    }
+
+    const map = MAPS[state.mapId] ?? MAPS.usa;
+    if (!map.cities.includes(city)) {
+      throw new Error("Город не найден на карте");
+    }
+    if (state.stations.some((station) => station.city === city)) {
+      throw new Error("В этом городе уже есть станция");
+    }
+
+    const cost = getStationBuildCost(stationsLeft);
+    const locoCards = activePlayer.hand.filter((c) => c.color === "locomotive").length;
+
+    if (color !== "locomotive") {
+      const colorCards = activePlayer.hand.filter((c) => c.color === color).length;
+      if (colorCards + locoCards < cost) throw new Error("Недостаточно карт для постройки станции");
+      if (typeof useLocomotives === "number") {
+        if (useLocomotives < 0 || useLocomotives > cost) throw new Error("Некорректное число локомотивов");
+        const needColor = cost - useLocomotives;
+        if (locoCards < useLocomotives || colorCards < needColor) {
+          throw new Error("Недостаточно карт для выбранной комбинации");
+        }
+      }
+    } else if (locoCards < cost) {
+      throw new Error("Недостаточно карт-локомотивов");
+    }
+
+    const requestedLoco = color === "locomotive"
+      ? cost
+      : Math.max(0, Math.min(cost, useLocomotives ?? (cost - Math.min(
+        activePlayer.hand.filter((c) => c.color === color).length,
+        cost,
+      ))));
+
+    const colorAvailable = color === "locomotive"
+      ? 0
+      : activePlayer.hand.filter((c) => c.color === color).length;
+    const locoAvailable = activePlayer.hand.filter((c) => c.color === "locomotive").length;
+
+    let needColorCards = color === "locomotive" ? 0 : (cost - requestedLoco);
+    let needLocoCards = requestedLoco;
+
+    if (needColorCards > colorAvailable || needLocoCards > locoAvailable) {
+      throw new Error("Недостаточно карт для постройки станции");
+    }
+
+    const newHand: TrainCard[] = [];
+    for (const card of activePlayer.hand) {
+      if (needColorCards > 0 && card.color === color) {
+        this.discardDeck.push(card);
+        needColorCards -= 1;
+        continue;
+      }
+      if (needLocoCards > 0 && card.color === "locomotive") {
+        this.discardDeck.push(card);
+        needLocoCards -= 1;
+        continue;
+      }
+      newHand.push(card);
+    }
+    if (needColorCards > 0 || needLocoCards > 0) {
+      throw new Error("Не удалось списать выбранную комбинацию карт");
+    }
+
+    activePlayer.hand = newHand;
+    activePlayer.stationsLeft = stationsLeft - 1;
+    state.stations.push({ city, ownerSessionToken: activePlayer.sessionToken });
+
+    state.log.unshift(`${activePlayer.nickname} построил станцию в ${city}`);
+    pushEvent(state, {
+      id: eventId(),
+      type: "build_station",
+      sessionToken: activePlayer.sessionToken,
+      nickname: activePlayer.nickname,
+      city,
+    });
 
     this.finishTurnAndMaybeEndGame(state);
     this.syncDeckCounts(state);
@@ -429,6 +516,9 @@ export class GameEngine {
     const standingsWithMeta = state.players.map((player) => {
       const destinationScore = this.scoreDestinations(state, player.sessionToken, player.destinations);
       player.points += destinationScore.delta;
+      if (state.mapId === "europe") {
+        player.points += (player.stationsLeft ?? 0) * 4;
+      }
       return {
         player,
         completedDestinations: destinationScore.completed
@@ -463,12 +553,11 @@ export class GameEngine {
   }
 
   private scoreDestinations(state: GameState, sessionToken: string, destinations: DestinationCard[]): { delta: number; completed: number } {
-    const adjacency = buildAdjacency(state, sessionToken);
     let delta = 0;
     let completed = 0;
 
     for (const destination of destinations) {
-      if (isConnected(adjacency, destination.from, destination.to)) {
+      if (this.isDestinationConnected(state, sessionToken, destination.from, destination.to)) {
         delta += destination.points;
         completed += 1;
       } else {
@@ -477,6 +566,48 @@ export class GameEngine {
     }
 
     return { delta, completed };
+  }
+
+  private isDestinationConnected(state: GameState, sessionToken: string, from: string, to: string): boolean {
+    const baseAdjacency = buildAdjacency(state, sessionToken);
+    if (isConnected(baseAdjacency, from, to)) return true;
+
+    const stationCities = state.stations
+      .filter((station) => station.ownerSessionToken === sessionToken)
+      .map((station) => station.city);
+    if (stationCities.length === 0) return false;
+
+    const stationOptions = stationCities.map((city) => {
+      const options = state.routes.filter((route) => {
+        if (!route.ownerSessionToken || route.ownerSessionToken === sessionToken) return false;
+        return route.from === city || route.to === city;
+      });
+      return [null, ...options];
+    });
+
+    const tryCombination = (index: number, picked: Route[]): boolean => {
+      if (index >= stationOptions.length) {
+        const adjacency = new Map<string, Set<string>>();
+        for (const [city, neighbors] of baseAdjacency.entries()) {
+          adjacency.set(city, new Set(neighbors));
+        }
+        for (const route of picked) {
+          if (!adjacency.has(route.from)) adjacency.set(route.from, new Set<string>());
+          if (!adjacency.has(route.to)) adjacency.set(route.to, new Set<string>());
+          adjacency.get(route.from)?.add(route.to);
+          adjacency.get(route.to)?.add(route.from);
+        }
+        return isConnected(adjacency, from, to);
+      }
+
+      for (const option of stationOptions[index]) {
+        if (option && tryCombination(index + 1, [...picked, option])) return true;
+        if (!option && tryCombination(index + 1, picked)) return true;
+      }
+      return false;
+    };
+
+    return tryCombination(0, []);
   }
 
   private advanceTurn(state: GameState): void {
@@ -489,23 +620,5 @@ export class GameEngine {
     state.destinationDeckCount = this.destinationDeck.length;
   }
 
-  private drawTrainCardWithReshuffle(): TrainCard | null {
-    if (this.trainDeck.length === 0 && this.discardDeck.length > 0) {
-      this.trainDeck = shuffle([...this.discardDeck]);
-      this.discardDeck = [];
-    }
-    return drawFromDeck(this.trainDeck);
-  }
-
-  private revealTunnelCards(count: number): TrainCard[] {
-    const revealed: TrainCard[] = [];
-    for (let i = 0; i < count; i += 1) {
-      const card = this.drawTrainCardWithReshuffle();
-      if (!card) break;
-      revealed.push(card);
-      this.discardDeck.push(card);
-    }
-    return revealed;
-  }
 }
 

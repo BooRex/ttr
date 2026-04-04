@@ -2,6 +2,26 @@ import { describe, expect, it } from "vitest";
 import { GameEngine } from "../src/gameEngine.js";
 import { MAPS } from "@ttr/shared";
 
+const sameRoutePair = (
+  route: { from: string; to: string },
+  from: string,
+  to: string,
+): boolean => (
+  (route.from === from && route.to === to) || (route.from === to && route.to === from)
+);
+
+const findRoute = (
+  routes: Array<{ from: string; to: string; color: string; routeType?: string; id: string }>,
+  from: string,
+  to: string,
+  color?: string,
+  routeType?: string,
+) => routes.find((route) => (
+  sameRoutePair(route, from, to)
+  && (color ? route.color === color : true)
+  && (routeType ? route.routeType === routeType : true)
+));
+
 describe("GameEngine", () => {
   it("раздает карты и запускает игру", () => {
     const engine = new GameEngine();
@@ -197,6 +217,48 @@ describe("GameEngine", () => {
     expect(MAPS.usa.destinationDeck.length).toBeGreaterThanOrEqual(30);
   });
 
+  it("карта Europe не содержит битых ссылок и изолированных городов", () => {
+    const europe = MAPS.europe;
+    const cities = new Set(europe.cities);
+    const adjacency = new Map<string, Set<string>>();
+
+    for (const city of europe.cities) {
+      adjacency.set(city, new Set());
+    }
+
+    for (const route of europe.routes) {
+      expect(cities.has(route.from)).toBe(true);
+      expect(cities.has(route.to)).toBe(true);
+      adjacency.get(route.from)?.add(route.to);
+      adjacency.get(route.to)?.add(route.from);
+    }
+
+    for (const card of europe.destinationDeck) {
+      expect(cities.has(card.from)).toBe(true);
+      expect(cities.has(card.to)).toBe(true);
+    }
+
+    for (const city of europe.cities) {
+      expect(adjacency.get(city)?.size ?? 0).toBeGreaterThan(0);
+    }
+
+    const start = europe.cities[0];
+    expect(start).toBeTruthy();
+    const visited = new Set<string>(start ? [start] : []);
+    const queue = start ? [start] : [];
+
+    while (queue.length > 0) {
+      const current = queue.shift() as string;
+      for (const next of adjacency.get(current) ?? []) {
+        if (visited.has(next)) continue;
+        visited.add(next);
+        queue.push(next);
+      }
+    }
+
+    expect(visited.size).toBe(europe.cities.length);
+  });
+
   it("изолирует состояние маршрутов между разными комнатами", () => {
     const engineA = new GameEngine();
     const engineB = new GameEngine();
@@ -270,11 +332,17 @@ describe("GameEngine", () => {
       { maxPlayers: 2, turnTimerSeconds: null }
     );
 
-    state.routes.find((r) => r.id === "e14")!.ownerSessionToken = "a";
+    const first = findRoute(state.routes, "Berlin", "Warszawa", "yellow");
+    const second = findRoute(state.routes, "Berlin", "Warszawa", "pink");
+
+    expect(first).toBeTruthy();
+    expect(second).toBeTruthy();
+
+    first!.ownerSessionToken = "a";
     state.activePlayerIndex = 1;
     state.players[1]!.hand = [{ color: "pink" }, { color: "pink" }, { color: "pink" }, { color: "pink" }];
 
-    expect(() => engine.claimRoute(state, "b", "e73", "pink", 0)).toThrow("При 2–3 игроках второй параллельный путь недоступен");
+    expect(() => engine.claimRoute(state, "b", second!.id, "pink", 0)).toThrow("При 2–3 игроках второй параллельный путь недоступен");
   });
 
   it("разрешает брать оба параллельных пути при 4 игроках", () => {
@@ -291,14 +359,18 @@ describe("GameEngine", () => {
       { maxPlayers: 4, turnTimerSeconds: null }
     );
 
-    const first = state.routes.find((r) => r.id === "e14")!;
-    const second = state.routes.find((r) => r.id === "e73")!;
+    const first = findRoute(state.routes, "Berlin", "Warszawa", "yellow");
+    const second = findRoute(state.routes, "Berlin", "Warszawa", "pink");
+
+    expect(first).toBeTruthy();
+    expect(second).toBeTruthy();
+
     first.ownerSessionToken = "a";
     state.activePlayerIndex = 1;
     state.players[1]!.hand = [{ color: "pink" }, { color: "pink" }, { color: "pink" }, { color: "pink" }];
 
-    engine.claimRoute(state, "b", second.id, "pink", 0);
-    expect(second.ownerSessionToken).toBe("b");
+    engine.claimRoute(state, "b", second!.id, "pink", 0);
+    expect(second!.ownerSessionToken).toBe("b");
   });
 
   it("требует минимум локомотивов для парома", () => {
@@ -318,13 +390,16 @@ describe("GameEngine", () => {
       { color: "locomotive" },
     ];
 
-    expect(() => engine.claimRoute(state, "a", "e59", "orange", 1)).toThrow("Для парома нужно минимум 2 локомотив(а)");
+    const route = findRoute(state.routes, "Palermo", "Smyrna", "gray", "ferry");
+    expect(route).toBeTruthy();
+
+    expect(() => engine.claimRoute(state, "a", route!.id, "orange", 1)).toThrow("Для этого маршрута нужно минимум 2 локомотив(а)");
   });
 
-  it("требует доплату при туннеле по открытым картам", () => {
+  it("требует минимум 1 локомотив для туннеля", () => {
     const engine = new GameEngine();
     const state = engine.initGame(
-      "ROOM_EURO_TUNNEL_REQ",
+      "ROOM_EURO_TUNNEL_LOCO_REQ",
       [
         { sessionToken: "a", nickname: "A", wagonsLeft: 45, hand: [], destinations: [], points: 0 },
         { sessionToken: "b", nickname: "B", wagonsLeft: 45, hand: [], destinations: [], points: 0 }
@@ -336,17 +411,67 @@ describe("GameEngine", () => {
     state.players[0]!.hand = [
       { color: "yellow" },
       { color: "yellow" },
-      { color: "locomotive" },
     ];
 
-    (engine as any).trainDeck = [
-      { color: "yellow" },
-      { color: "blue" },
-      { color: "locomotive" },
-      ...((engine as any).trainDeck as Array<{ color: string }>),
-    ];
+    const route = findRoute(state.routes, "Barcelona", "Pamplona", "gray", "tunnel");
+    expect(route).toBeTruthy();
 
-    expect(() => engine.claimRoute(state, "a", "e9", "yellow", 0)).toThrow("Недостаточно карт для оплаты туннеля");
+    expect(() => engine.claimRoute(state, "a", route!.id, "yellow", 0)).toThrow("Для этого маршрута нужно минимум 1 локомотив(а)");
+  });
+
+  it("строит станцию в Europe и списывает карты по стоимости", () => {
+    const engine = new GameEngine();
+    const state = engine.initGame(
+      "ROOM_EURO_STATION_BUILD",
+      [
+        { sessionToken: "a", nickname: "A", wagonsLeft: 45, hand: [], destinations: [], points: 0 },
+        { sessionToken: "b", nickname: "B", wagonsLeft: 45, hand: [], destinations: [], points: 0 }
+      ],
+      "europe",
+      { maxPlayers: 2, turnTimerSeconds: null }
+    );
+
+    state.players[0]!.hand = [{ color: "blue" }, { color: "red" }];
+
+    engine.buildStation(state, "a", "Paris", "blue", 0);
+
+    expect(state.stations).toContainEqual({ city: "Paris", ownerSessionToken: "a" });
+    expect(state.players[0]!.stationsLeft).toBe(2);
+    expect(state.players[0]!.hand).toEqual([{ color: "red" }]);
+    expect(state.activePlayerIndex).toBe(1);
+  });
+
+  it("учитывает +4 очка за каждую неиспользованную станцию в конце игры", () => {
+    const engine = new GameEngine();
+    const state = engine.initGame(
+      "ROOM_EURO_STATION_SCORE",
+      [
+        { sessionToken: "a", nickname: "A", wagonsLeft: 45, hand: [], destinations: [], points: 0 },
+        { sessionToken: "b", nickname: "B", wagonsLeft: 45, hand: [], destinations: [], points: 0 }
+      ],
+      "europe",
+      { maxPlayers: 2, turnTimerSeconds: null }
+    );
+
+    state.players[0]!.destinations = [];
+    state.players[1]!.destinations = [];
+    state.players[0]!.points = 0;
+    state.players[1]!.points = 0;
+    state.players[0]!.stationsLeft = 2;
+    state.players[1]!.stationsLeft = 1;
+
+    state.lastRoundTriggered = true;
+    state.lastRoundEndIndex = 0;
+    state.activePlayerIndex = 1;
+
+    engine.drawCard(state, "b");
+    engine.drawCard(state, "b");
+
+    expect(state.finished).toBe(true);
+    const a = state.finalStandings.find((s) => s.sessionToken === "a");
+    const b = state.finalStandings.find((s) => s.sessionToken === "b");
+    expect(a?.points).toBe(8);
+    expect(b?.points).toBe(4);
   });
 });
 

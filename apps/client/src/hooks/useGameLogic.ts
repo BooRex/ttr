@@ -54,9 +54,15 @@ export const useGameLogic = ({ game, roomId, sessionToken }: UseGameLogicProps) 
 
   const drawCardFrom = useCallback(
     (index?: number) => {
-      emit(SOCKET_EVENTS.GAME_DRAW_CARD, { fromOpenIndex: index });
+      if (typeof index === "undefined" && (game?.turnActionState.drawCardsTaken ?? 0) === 0) {
+        // No card drawn yet this turn → draw 2 from deck in one click
+        emit(SOCKET_EVENTS.GAME_DRAW_TWO_DECK);
+      } else {
+        // Open-market card, or 2nd draw after an open card
+        emit(SOCKET_EVENTS.GAME_DRAW_CARD, { fromOpenIndex: index });
+      }
     },
-    [emit],
+    [emit, game?.turnActionState.drawCardsTaken],
   );
 
   const claimRoute = useCallback(() => {
@@ -66,6 +72,14 @@ export const useGameLogic = ({ game, roomId, sessionToken }: UseGameLogicProps) 
       useLocomotives: selectedLocoCount,
     });
   }, [emit, selectedRouteId, selectedColor, selectedLocoCount]);
+
+  const buildStation = useCallback((city: string, color: CardColor, useLocomotives?: number) => {
+    emit(SOCKET_EVENTS.GAME_BUILD_STATION, {
+      city,
+      color,
+      useLocomotives,
+    });
+  }, [emit]);
 
   const onSelectClaim = useCallback(
     (baseColor: CardColor, locoCount: number) => {
@@ -108,6 +122,7 @@ export const useGameLogic = ({ game, roomId, sessionToken }: UseGameLogicProps) 
     startGame,
     drawCardFrom,
     claimRoute,
+    buildStation,
     onSelectClaim,
     drawDestinations,
     confirmDestinations,

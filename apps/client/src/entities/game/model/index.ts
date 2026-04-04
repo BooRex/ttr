@@ -9,6 +9,7 @@ export {
 
 export {
   buildConnectionHighlight,
+  buildDestinationSelectionHighlight,
   buildOwnedDestinationHighlight,
   sameRoutePair,
   type RouteHighlight,

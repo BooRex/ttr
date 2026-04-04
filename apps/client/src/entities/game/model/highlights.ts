@@ -17,6 +17,13 @@ export const buildConnectionHighlight = (
   };
 };
 
+export const buildDestinationSelectionHighlight = (
+  cards: DestinationCard[],
+): RouteHighlight => {
+  const cityNames = [...new Set(cards.flatMap((card) => [card.from, card.to]))];
+  return { routeIds: [], cityNames };
+};
+
 export const buildOwnedDestinationHighlight = (
   routes: Route[],
   sessionToken: string,

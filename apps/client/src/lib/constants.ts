@@ -11,9 +11,11 @@ export const SOCKET_EVENTS = {
 
   // Game events
   GAME_DRAW_CARD: "game:draw-card",
+  GAME_DRAW_TWO_DECK: "game:draw-two-deck",
   GAME_DRAW_DESTINATIONS: "game:draw-destinations",
   GAME_CHOOSE_DESTINATIONS: "game:choose-destinations",
   GAME_CLAIM_ROUTE: "game:claim-route",
+  GAME_BUILD_STATION: "game:build-station",
 
   // Connection
   RECONNECT: "reconnect",

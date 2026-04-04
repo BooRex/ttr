@@ -1,5 +1,6 @@
 import { usaMap } from "./maps/usa.js";
 import { europeMap } from "./maps/europe.js";
+export { getMinRequiredLocomotives, getStationBuildCost } from "./routeRules.js";
 
 export type CardColor =
   | "red"
@@ -25,10 +26,16 @@ export type Player = {
   sessionToken: string;
   nickname: string;
   wagonsLeft: number;
+  stationsLeft?: number;
   hand: TrainCard[];
   destinations: DestinationCard[];
   points: number;
   isSpectator?: boolean;
+};
+
+export type Station = {
+  city: string;
+  ownerSessionToken: string;
 };
 
 export type Route = {
@@ -47,7 +54,8 @@ export type GameEvent =
   | { id: string; type: "draw_card"; sessionToken: string; nickname: string }
   | { id: string; type: "draw_destinations"; sessionToken: string; nickname: string }
   | { id: string; type: "choose_destinations"; sessionToken: string; nickname: string; keepCount: number }
-  | { id: string; type: "claim_route"; sessionToken: string; nickname: string; routeId: string; from: string; to: string }
+  | { id: string; type: "claim_route"; sessionToken: string; nickname: string; routeId: string; from: string; to: string; points?: number }
+  | { id: string; type: "build_station"; sessionToken: string; nickname: string; city: string }
   | { id: string; type: "final_round"; sessionToken: string; nickname: string; wagonsLeft: number }
   | { id: string; type: "turn_skipped"; sessionToken: string; nickname: string; reason: string }
   | { id: string; type: "game_finished"; winnerSessionToken: string | null; winnerNickname: string | null; winnerPoints: number | null };
@@ -74,7 +82,7 @@ export type GameSettings = {
   maxPlayers: number;
 };
 
-export type TurnAction = "draw_cards" | "draw_destinations" | "claim_route";
+export type TurnAction = "draw_cards" | "draw_destinations" | "claim_route" | "build_station";
 
 export type TurnActionState = {
   action: TurnAction | null;
@@ -100,6 +108,7 @@ export type GameState = {
   started: boolean;
   finished: boolean;
   routes: Route[];
+  stations: Station[];
   players: Player[];
   spectators: Player[];
   activePlayerIndex: number;
@@ -146,12 +155,20 @@ export type ClientToServerEvents = {
   "room:start": (payload: { roomId: string; sessionToken: string }) => void;
   reconnect: (payload: { roomId: string; sessionToken: string }) => void;
   "game:draw-card": (payload: { roomId: string; sessionToken: string; fromOpenIndex?: number }) => void;
+  "game:draw-two-deck": (payload: { roomId: string; sessionToken: string }) => void;
   "game:draw-destinations": (payload: { roomId: string; sessionToken: string }) => void;
   "game:choose-destinations": (payload: { roomId: string; sessionToken: string; keepIds: string[] }) => void;
   "game:claim-route": (payload: {
     roomId: string;
     sessionToken: string;
     routeId: string;
+    color: CardColor;
+    useLocomotives?: number;
+  }) => void;
+  "game:build-station": (payload: {
+    roomId: string;
+    sessionToken: string;
+    city: string;
     color: CardColor;
     useLocomotives?: number;
   }) => void;

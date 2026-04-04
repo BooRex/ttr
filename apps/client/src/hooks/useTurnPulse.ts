@@ -1,5 +1,33 @@
 import { useEffect, useRef, useState } from "react";
 
+const playTurnChessLikeSound = () => {
+  const ctx = new AudioContext();
+  const now = ctx.currentTime;
+
+  const click = (time: number, freq: number, duration: number, gainValue: number) => {
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = "triangle";
+    osc.frequency.setValueAtTime(freq, time);
+    osc.frequency.exponentialRampToValueAtTime(Math.max(80, freq * 0.55), time + duration);
+    gain.gain.setValueAtTime(0.0001, time);
+    gain.gain.exponentialRampToValueAtTime(gainValue, time + 0.005);
+    gain.gain.exponentialRampToValueAtTime(0.0001, time + duration);
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start(time);
+    osc.stop(time + duration + 0.01);
+    return osc;
+  };
+
+  const osc1 = click(now, 320, 0.1, 0.16);
+  const osc2 = click(now + 0.1, 250, 0.12, 0.14);
+
+  osc2.onended = () => void ctx.close();
+  // Keep a reference path so the first oscillator is not garbage-collected too early in old browsers.
+  void osc1;
+};
+
 /**
  * Manages audio context unlock and turn pulse effect
  */
@@ -27,20 +55,7 @@ export const useTurnPulse = (activeToken: string | null | undefined, sessionToke
 
       if (audioUnlocked.current) {
         try {
-          const ctx = new AudioContext();
-          const osc = ctx.createOscillator();
-          const gain = ctx.createGain();
-          osc.type = "triangle";
-          osc.frequency.setValueAtTime(640, ctx.currentTime);
-          osc.frequency.exponentialRampToValueAtTime(980, ctx.currentTime + 0.25);
-          gain.gain.setValueAtTime(0.0001, ctx.currentTime);
-          gain.gain.exponentialRampToValueAtTime(0.09, ctx.currentTime + 0.02);
-          gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.82);
-          osc.connect(gain);
-          gain.connect(ctx.destination);
-          osc.start();
-          osc.stop(ctx.currentTime + 0.85);
-          osc.onended = () => void ctx.close();
+          playTurnChessLikeSound();
         } catch {
           // Ignore audio errors
         }

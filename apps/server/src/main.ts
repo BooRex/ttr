@@ -20,6 +20,31 @@ const io = new Server<ClientToServerEvents, ServerToClientEvents>(httpServer, {
   cors: { origin: corsOrigin }
 });
 
+const toWaitingRoomState = (room: ReturnType<RoomService["create"]>) => ({
+  roomId: room.roomId,
+  mapId: room.mapId,
+  started: room.started,
+  finished: false,
+  routes: [],
+  stations: [],
+  players: room.players,
+  spectators: room.spectators,
+  activePlayerIndex: 0,
+  openCards: [],
+  trainDeckCount: 0,
+  discardDeckCount: 0,
+  destinationDeckCount: 0,
+  pendingDestinationChoice: null,
+  lastRoundTriggered: false,
+  lastRoundEndIndex: null,
+  winnerSessionToken: null,
+  finalStandings: [],
+  log: ["Ожидание старта"],
+  events: [],
+  settings: { maxPlayers: room.maxPlayers, turnTimerSeconds: room.timerSeconds },
+  turnActionState: { action: null, drawCardsTaken: 0 }
+});
+
 const emitStateForRoom = (roomId: string): void => {
   void io.in(roomId).fetchSockets().then((sockets) => {
     for (const clientSocket of sockets) {
@@ -49,29 +74,7 @@ io.on("connection", (socket) => {
       const room = rooms.create(payload);
       socket.data.sessionToken = payload.sessionToken;
       socket.join(room.roomId);
-      socket.emit("room:joined", {
-        roomId: room.roomId,
-        mapId: room.mapId,
-        started: false,
-        finished: false,
-        routes: [],
-        players: room.players,
-        spectators: room.spectators,
-        activePlayerIndex: 0,
-        openCards: [],
-        trainDeckCount: 0,
-        discardDeckCount: 0,
-        destinationDeckCount: 0,
-        pendingDestinationChoice: null,
-        lastRoundTriggered: false,
-        lastRoundEndIndex: null,
-        winnerSessionToken: null,
-        finalStandings: [],
-        log: ["Комната создана"],
-        events: [],
-        settings: { maxPlayers: room.maxPlayers, turnTimerSeconds: room.timerSeconds },
-        turnActionState: { action: null, drawCardsTaken: 0 }
-      });
+      io.to(room.roomId).emit("room:joined", toWaitingRoomState(room));
       io.emit("room:list", rooms.list());
     } catch (error) {
       socket.emit("room:error", (error as Error).message);
@@ -83,31 +86,14 @@ io.on("connection", (socket) => {
       const room = rooms.join(payload);
       socket.data.sessionToken = payload.sessionToken;
       socket.join(room.roomId);
-      const state = room.state ? rooms.getStateForViewer(room.roomId, payload.sessionToken) : {
-        roomId: room.roomId,
-        mapId: room.mapId,
-        started: room.started,
-        finished: false,
-        routes: [],
-        players: room.players,
-        spectators: room.spectators,
-        activePlayerIndex: 0,
-        openCards: [],
-        trainDeckCount: 0,
-        discardDeckCount: 0,
-        destinationDeckCount: 0,
-        pendingDestinationChoice: null,
-        lastRoundTriggered: false,
-        lastRoundEndIndex: null,
-        winnerSessionToken: null,
-        finalStandings: [],
-        log: ["Ожидание старта"],
-        events: [],
-        settings: { maxPlayers: room.maxPlayers, turnTimerSeconds: room.timerSeconds },
-        turnActionState: { action: null, drawCardsTaken: 0 }
-      };
-      emitStateForRoom(room.roomId);
-      socket.emit("room:joined", state);
+
+      if (room.state) {
+        emitStateForRoom(room.roomId);
+        socket.emit("room:joined", rooms.getStateForViewer(room.roomId, payload.sessionToken));
+      } else {
+        io.to(room.roomId).emit("room:joined", toWaitingRoomState(room));
+      }
+
       io.emit("room:list", rooms.list());
     } catch (error) {
       socket.emit("room:error", (error as Error).message);
@@ -134,12 +120,36 @@ io.on("connection", (socket) => {
     }
   });
 
+  socket.on("game:draw-two-deck", (payload) => {
+    try {
+      rooms.drawTwoDeckCards(payload.roomId, payload.sessionToken);
+      emitStateForRoom(payload.roomId);
+    } catch (error) {
+      socket.emit("room:error", (error as Error).message);
+    }
+  });
+
   socket.on("game:claim-route", (payload) => {
     try {
       rooms.claimRoute(
         payload.roomId,
         payload.sessionToken,
         payload.routeId,
+        payload.color,
+        payload.useLocomotives,
+      );
+      emitStateForRoom(payload.roomId);
+    } catch (error) {
+      socket.emit("room:error", (error as Error).message);
+    }
+  });
+
+  socket.on("game:build-station", (payload) => {
+    try {
+      rooms.buildStation(
+        payload.roomId,
+        payload.sessionToken,
+        payload.city,
         payload.color,
         payload.useLocomotives,
       );

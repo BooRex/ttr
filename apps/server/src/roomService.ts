@@ -45,6 +45,7 @@ export class RoomService {
       nickname: payload.nickname,
       sessionToken: payload.sessionToken,
       wagonsLeft: 45,
+      stationsLeft: payload.mapId === "europe" ? 3 : 0,
       hand: [],
       destinations: [],
       points: 0
@@ -79,6 +80,7 @@ export class RoomService {
           nickname: payload.nickname,
           sessionToken: payload.sessionToken,
           wagonsLeft: 45,
+          stationsLeft: 0,
           hand: [],
           destinations: [],
           points: 0,
@@ -101,6 +103,7 @@ export class RoomService {
       nickname: payload.nickname,
       sessionToken: payload.sessionToken,
       wagonsLeft: 45,
+      stationsLeft: room.mapId === "europe" ? 3 : 0,
       hand: [],
       destinations: [],
       points: 0
@@ -142,6 +145,17 @@ export class RoomService {
     return room.state;
   }
 
+  drawTwoDeckCards(roomId: string, sessionToken: string): GameState {
+    const room = this.rooms.get(roomId);
+    if (!room?.state) throw new Error("Игра не запущена");
+    // Draw first deck card
+    room.state = room.engine.drawCard(room.state, sessionToken);
+    // Draw second deck card (will also end the turn)
+    room.state = room.engine.drawCard(room.state, sessionToken);
+    this.scheduleTurnTimer(room);
+    return room.state;
+  }
+
   drawDestinations(roomId: string, sessionToken: string): GameState {
     const room = this.rooms.get(roomId);
     if (!room?.state) throw new Error("Игра не запущена");
@@ -168,6 +182,20 @@ export class RoomService {
     const room = this.rooms.get(roomId);
     if (!room?.state) throw new Error("Игра не запущена");
     room.state = room.engine.claimRoute(room.state, sessionToken, routeId, color, useLocomotives);
+    this.scheduleTurnTimer(room);
+    return room.state;
+  }
+
+  buildStation(
+    roomId: string,
+    sessionToken: string,
+    city: string,
+    color: CardColor,
+    useLocomotives?: number,
+  ): GameState {
+    const room = this.rooms.get(roomId);
+    if (!room?.state) throw new Error("Игра не запущена");
+    room.state = room.engine.buildStation(room.state, sessionToken, city, color, useLocomotives);
     this.scheduleTurnTimer(room);
     return room.state;
   }
