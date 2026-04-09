@@ -59,21 +59,12 @@ export type GameEvent =
   | { id: string; type: "turn_skipped"; sessionToken: string; nickname: string; reason: string }
   | { id: string; type: "game_finished"; winnerSessionToken: string | null; winnerNickname: string | null; winnerPoints: number | null };
 
-export type Point = {
-  x: number;
-  y: number;
-};
-
-export type MapDefinition = {
+type MapDefinition = {
   id: string;
   name: string;
   cities: string[];
   routes: Route[];
   destinationDeck: DestinationCard[];
-  cityPoints?: Record<string, Point>;
-  boardSize?: { width: number; height: number };
-  backgroundOffset?: Point;
-  backgroundSvgSize?: { width: number; height: number };
 };
 
 export type GameSettings = {

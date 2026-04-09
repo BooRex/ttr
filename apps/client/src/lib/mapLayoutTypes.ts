@@ -1,6 +1,5 @@
 export type Point = { x: number; y: number };
 export type LabelOffset = { dx: number; dy: number };
-export type GeoPoint = { lat: number; lon: number };
 export type LandPolygon = Point[];
 
 export type MapLayout = {

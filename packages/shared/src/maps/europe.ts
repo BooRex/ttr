@@ -1,11 +1,16 @@
-import type { MapDefinition } from "../index.js";
+import type { DestinationCard, Route } from "../index.js";
 
-export const europeMap: MapDefinition = {
+type EuropeMapDefinition = {
+  id: string;
+  name: string;
+  cities: string[];
+  routes: Route[];
+  destinationDeck: DestinationCard[];
+};
+
+export const europeMap: EuropeMapDefinition = {
   id: "europe",
   name: "Europe",
-  boardSize: { width: 1335, height: 872 },
-  backgroundOffset: { x: 70, y: 470 },
-  backgroundSvgSize: { width: 1613, height: 1417 },
   cities: [
     "London",
     "Edinburgh",
@@ -55,55 +60,6 @@ export const europeMap: MapDefinition = {
     "Sevastopol",
     "Rostov"
   ],
-  cityPoints: {
-    "Edinburgh": { x: 268, y: 232 },
-    "London": { x: 309, y: 392 },
-    "Amsterdam": { x: 410, y: 369 },
-    "Bruxelles": { x: 404, y: 428 },
-    "Dieppe": { x: 323, y: 449 },
-    "Paris": { x: 380, y: 509 },
-    "Brest": { x: 215, y: 488 },
-    "Essen": { x: 485, y: 411 },
-    "Frankfurt": { x: 487, y: 475 },
-    "Berlin": { x: 567, y: 373 },
-    "Danzig": { x: 645, y: 310 },
-    "Copenhagen": { x: 558, y: 268 },
-    "Stockholm": { x: 650, y: 136 },
-    "Zurich": { x: 486, y: 552 },
-    "Munich": { x: 560, y: 500 },
-    "Vienna": { x: 644, y: 529 },
-    "Budapest": { x: 720, y: 534 },
-    "Warszawa": { x: 732, y: 352 },
-    "Wilno": { x: 840, y: 287 },
-    "Riga": { x: 775, y: 197 },
-    "Petrograd": { x: 854, y: 85 },
-    "Smolensk": { x: 947, y: 223 },
-    "Moskva": { x: 1007, y: 151 },
-    "Kyiv": { x: 943, y: 385 },
-    "Kharkov": { x: 1063, y: 371 },
-    "Bucharest": { x: 902, y: 595 },
-    "Sofia": { x: 837, y: 668 },
-    "Athina": { x: 834, y: 804 },
-    "Sarajevo": { x: 720, y: 648 },
-    "Zagreb": { x: 633, y: 612 },
-    "Venezia": { x: 562, y: 600 },
-    "Roma": { x: 568, y: 721 },
-    "Brindisi": { x: 703, y: 757 },
-    "Palermo": { x: 610, y: 856 },
-    "Barcelona": { x: 284, y: 734 },
-    "Pamplona": { x: 223, y: 665 },
-    "Madrid": { x: 162, y: 748 },
-    "Cadiz": { x: 96, y: 857 },
-    "Lisboa": { x: 25, y: 744 },
-    "Marseille": { x: 397, y: 665 },
-    "Constantinople": { x: 982, y: 688 },
-    "Ankara": { x: 1114, y: 693 },
-    "Smyrna": { x: 971, y: 812 },
-    "Erzurum": { x: 1260, y: 639 },
-    "Sochi": { x: 1170, y: 520 },
-    "Sevastopol": { x: 1058, y: 550 },
-    "Rostov": { x: 1151, y: 432 }
-  },
   routes: [
     { id: "e1", from: "London", to: "Edinburgh", length: 2, color: "black", routeType: "normal" },
     { id: "e2", from: "London", to: "Edinburgh", length: 2, color: "orange", routeType: "normal" },
