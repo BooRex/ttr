@@ -31,7 +31,7 @@ describe("GameEngine", () => {
         { sessionToken: "a", nickname: "A", wagonsLeft: 45, hand: [], destinations: [], points: 0 },
         { sessionToken: "b", nickname: "B", wagonsLeft: 45, hand: [], destinations: [], points: 0 }
       ],
-      "usa",
+      "europe",
       { maxPlayers: 5, turnTimerSeconds: null }
     );
 
@@ -49,7 +49,7 @@ describe("GameEngine", () => {
         { sessionToken: "a", nickname: "A", wagonsLeft: 45, hand: [], destinations: [], points: 0 },
         { sessionToken: "b", nickname: "B", wagonsLeft: 45, hand: [], destinations: [], points: 0 }
       ],
-      "usa",
+      "europe",
       { maxPlayers: 5, turnTimerSeconds: null }
     );
 
@@ -69,7 +69,7 @@ describe("GameEngine", () => {
         { sessionToken: "a", nickname: "A", wagonsLeft: 45, hand: [], destinations: [], points: 0 },
         { sessionToken: "b", nickname: "B", wagonsLeft: 45, hand: [], destinations: [], points: 0 }
       ],
-      "usa",
+      "europe",
       { maxPlayers: 5, turnTimerSeconds: null }
     );
 
@@ -88,7 +88,7 @@ describe("GameEngine", () => {
         { sessionToken: "a", nickname: "A", wagonsLeft: 45, hand: [], destinations: [], points: 0 },
         { sessionToken: "b", nickname: "B", wagonsLeft: 45, hand: [], destinations: [], points: 0 }
       ],
-      "usa",
+      "europe",
       { maxPlayers: 5, turnTimerSeconds: null }
     );
 
@@ -113,7 +113,7 @@ describe("GameEngine", () => {
         { sessionToken: "a", nickname: "A", wagonsLeft: 45, hand: [], destinations: [], points: 0 },
         { sessionToken: "b", nickname: "B", wagonsLeft: 45, hand: [], destinations: [], points: 0 }
       ],
-      "usa",
+      "europe",
       { maxPlayers: 5, turnTimerSeconds: null }
     );
 
@@ -131,7 +131,7 @@ describe("GameEngine", () => {
         { sessionToken: "a", nickname: "A", wagonsLeft: 45, hand: [], destinations: [], points: 0 },
         { sessionToken: "b", nickname: "B", wagonsLeft: 45, hand: [], destinations: [], points: 0 }
       ],
-      "usa",
+      "europe",
       { maxPlayers: 5, turnTimerSeconds: null }
     );
 
@@ -149,7 +149,7 @@ describe("GameEngine", () => {
         { sessionToken: "a", nickname: "A", wagonsLeft: 45, hand: [], destinations: [], points: 0 },
         { sessionToken: "b", nickname: "B", wagonsLeft: 45, hand: [], destinations: [], points: 0 }
       ],
-      "usa",
+      "europe",
       { maxPlayers: 5, turnTimerSeconds: null }
     );
 
@@ -166,16 +166,18 @@ describe("GameEngine", () => {
         { sessionToken: "a", nickname: "A", wagonsLeft: 45, hand: [], destinations: [], points: 0 },
         { sessionToken: "b", nickname: "B", wagonsLeft: 45, hand: [], destinations: [], points: 0 }
       ],
-      "usa",
+      "europe",
       { maxPlayers: 5, turnTimerSeconds: null }
     );
 
-    state.players[0]!.destinations = [{ id: "x", from: "Seattle", to: "Los Angeles", points: 9 }];
-    state.players[1]!.destinations = [{ id: "y", from: "Seattle", to: "Portland", points: 4 }];
+    state.players[0]!.destinations = [{ id: "x", from: "London", to: "Athina", points: 9 }];
+    state.players[1]!.destinations = [{ id: "y", from: "Madrid", to: "Pamplona", points: 4 }];
 
     // Дать игроку a очки за маршруты чтобы он гарантированно выиграл
     state.players[0]!.points = 25;
     state.players[1]!.points = 0;
+    state.players[0]!.stationsLeft = 0;
+    state.players[1]!.stationsLeft = 0;
 
     state.lastRoundTriggered = true;
     state.lastRoundEndIndex = 0;
@@ -200,7 +202,7 @@ describe("GameEngine", () => {
         { sessionToken: "a", nickname: "A", wagonsLeft: 45, hand: [], destinations: [], points: 0 },
         { sessionToken: "b", nickname: "B", wagonsLeft: 45, hand: [], destinations: [], points: 0 }
       ],
-      "usa",
+      "europe",
       { maxPlayers: 5, turnTimerSeconds: null }
     );
 
@@ -210,10 +212,10 @@ describe("GameEngine", () => {
     expect(() => engine.claimRoute(state, "a", "r1", "red")).toThrow("Игра уже завершена");
   });
 
-  it("использует расширенную USA карту с полноценной колодой маршрутов", () => {
-    expect(MAPS.usa.cities.length).toBeGreaterThanOrEqual(30);
-    expect(MAPS.usa.routes.length).toBeGreaterThanOrEqual(70);
-    expect(MAPS.usa.destinationDeck.length).toBeGreaterThanOrEqual(30);
+  it("использует карту Europe с полноценной колодой маршрутов", () => {
+    expect(MAPS.europe.cities.length).toBeGreaterThanOrEqual(40);
+    expect(MAPS.europe.routes.length).toBeGreaterThanOrEqual(70);
+    expect(MAPS.europe.destinationDeck.length).toBeGreaterThanOrEqual(30);
   });
 
   it("карта Europe не содержит битых ссылок и изолированных городов", () => {
@@ -268,7 +270,7 @@ describe("GameEngine", () => {
         { sessionToken: "a1", nickname: "A1", wagonsLeft: 45, hand: [], destinations: [], points: 0 },
         { sessionToken: "a2", nickname: "A2", wagonsLeft: 45, hand: [], destinations: [], points: 0 }
       ],
-      "usa",
+      "europe",
       { maxPlayers: 5, turnTimerSeconds: null }
     );
 
@@ -278,7 +280,7 @@ describe("GameEngine", () => {
         { sessionToken: "b1", nickname: "B1", wagonsLeft: 45, hand: [], destinations: [], points: 0 },
         { sessionToken: "b2", nickname: "B2", wagonsLeft: 45, hand: [], destinations: [], points: 0 }
       ],
-      "usa",
+      "europe",
       { maxPlayers: 5, turnTimerSeconds: null }
     );
 
@@ -296,7 +298,7 @@ describe("GameEngine", () => {
         { sessionToken: "a", nickname: "A", wagonsLeft: 45, hand: [], destinations: [], points: 0 },
         { sessionToken: "b", nickname: "B", wagonsLeft: 45, hand: [], destinations: [], points: 0 }
       ],
-      "usa",
+      "europe",
       { maxPlayers: 5, turnTimerSeconds: null }
     );
 
@@ -311,7 +313,9 @@ describe("GameEngine", () => {
     ];
 
     // r29: El Paso -> Dallas, length 4, red
-    engine.claimRoute(state, "a", "r29", "red", 2);
+    const route = findRoute(state.routes, "Pamplona", "Marseille", "red");
+    expect(route).toBeTruthy();
+    engine.claimRoute(state, "a", route!.id, "red", 2);
 
     const leftRed = player.hand.filter((c) => c.color === "red").length;
     const leftLoco = player.hand.filter((c) => c.color === "locomotive").length;
@@ -452,6 +456,8 @@ describe("GameEngine", () => {
 
     state.players[0]!.destinations = [];
     state.players[1]!.destinations = [];
+    state.players[0]!.stationsLeft = 0;
+    state.players[1]!.stationsLeft = 0;
     state.players[0]!.points = 0;
     state.players[1]!.points = 0;
     state.players[0]!.stationsLeft = 2;
@@ -479,7 +485,7 @@ describe("GameEngine", () => {
         { sessionToken: "a", nickname: "A", wagonsLeft: 45, hand: [], destinations: [], points: 0 },
         { sessionToken: "b", nickname: "B", wagonsLeft: 45, hand: [], destinations: [], points: 0 }
       ],
-      "usa",
+      "europe",
       { maxPlayers: 2, turnTimerSeconds: null }
     );
 
@@ -487,13 +493,19 @@ describe("GameEngine", () => {
     state.players[1]!.destinations = [];
 
     // A: непрерывная цепочка Seattle -> Portland -> San Francisco -> Los Angeles = 1+5+3 = 9
-    state.routes.find((r) => r.id === "r1")!.ownerSessionToken = "a";
-    state.routes.find((r) => r.id === "r2")!.ownerSessionToken = "a";
-    state.routes.find((r) => r.id === "r3")!.ownerSessionToken = "a";
+    const a1 = findRoute(state.routes, "Dieppe", "Paris", "pink");
+    const a2 = findRoute(state.routes, "Paris", "Frankfurt", "white");
+    const a3 = findRoute(state.routes, "Frankfurt", "Berlin", "red");
+    expect(a1).toBeTruthy();
+    expect(a2).toBeTruthy();
+    expect(a3).toBeTruthy();
+    a1!.ownerSessionToken = "a";
+    a2!.ownerSessionToken = "a";
+    a3!.ownerSessionToken = "a";
 
-    // B: короче
-    state.routes.find((r) => r.id === "r61")!.ownerSessionToken = "b";
-    state.routes.find((r) => r.id === "r62")!.ownerSessionToken = "b";
+    const b1 = findRoute(state.routes, "Sofia", "Constantinople", "blue");
+    expect(b1).toBeTruthy();
+    b1!.ownerSessionToken = "b";
 
     state.lastRoundTriggered = true;
     state.lastRoundEndIndex = 0;
@@ -506,10 +518,10 @@ describe("GameEngine", () => {
     const a = state.finalStandings.find((s) => s.sessionToken === "a");
     const b = state.finalStandings.find((s) => s.sessionToken === "b");
 
-    expect(a?.longestPathLength).toBe(9);
+    expect(a?.longestPathLength).toBe(7);
     expect(a?.longestPathBonus).toBe(10);
     expect(b?.longestPathBonus).toBe(0);
-    expect(a?.points).toBe(10);
+    expect(a?.points).toBe(22);
   });
 
   it("финальный раунд триггерится когда нельзя построить ни один маршрут по вагонам", () => {
@@ -568,7 +580,7 @@ describe("GameEngine", () => {
         { sessionToken: "a", nickname: "A", wagonsLeft: 45, hand: [], destinations: [], points: 0 },
         { sessionToken: "b", nickname: "B", wagonsLeft: 45, hand: [], destinations: [], points: 0 }
       ],
-      "usa",
+      "europe",
       { maxPlayers: 2, turnTimerSeconds: null }
     );
 
@@ -590,13 +602,15 @@ describe("GameEngine", () => {
         { sessionToken: "a", nickname: "A", wagonsLeft: 45, hand: [], destinations: [], points: 0 },
         { sessionToken: "b", nickname: "B", wagonsLeft: 45, hand: [], destinations: [], points: 0 }
       ],
-      "usa",
+      "europe",
       { maxPlayers: 2, turnTimerSeconds: null }
     );
 
     state.players[0]!.hand = [];
 
-    expect(() => engine.claimRoute(state, "a", "r1", "blue", 0)).toThrow("Недостаточно карт");
+    const route = findRoute(state.routes, "Dieppe", "Paris", "pink");
+    expect(route).toBeTruthy();
+    expect(() => engine.claimRoute(state, "a", route!.id, "pink", 0)).toThrow("Недостаточно карт");
     expect(state.turnActionState.action).toBeNull();
 
     expect(() => engine.drawDestinations(state, "a")).not.toThrow();

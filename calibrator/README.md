@@ -1,30 +1,40 @@
-# 🗺️ City Calibrator
+# 🗺️ Europe Cities Calibrator
 
-Интерактивный инструмент для калибрации координат городов на карте.
+Интерактивный инструмент для настройки `europeCities` (город + label offset) для
+`apps/client/src/lib/maps/europeLayout.ts`.
 
-## Установка и запуск
+## Запуск
 
 ```bash
 npm install
 npm run dev
 ```
 
-Сервер запустится на `http://localhost:5173`
+Открой: `http://localhost:5173`
 
-## Использование
+## Что умеет
 
-1. Выберите город из списка слева
-2. Кликните на его расположение на карте
-3. Повторите для всех городов
-4. Нажмите "Generate TypeScript" для получения координат
+- Drag города (изменяет `x/y`)
+- Drag подписи города (изменяет `label.dx/dy`)
+- Режимы редактирования: `both`, `city`, `label`
+- Копирование готового TypeScript-объекта `europeCities`
+- Автосохранение в `localStorage` (`ttr-calibration:v2`)
+- Миграция старого формата (`ttr-calibration` с `svgX/svgY`)
 
-Все данные автоматически сохраняются в `localStorage`.
+## Workflow
 
-## Результаты
+1. Выбери город в списке слева.
+2. Передвигай точку города и/или текст лейбла на карте.
+3. При необходимости используй `Reset city` / `Reset label`.
+4. Нажми `Copy europeCities`.
+5. Вставь объект в `apps/client/src/lib/maps/europeLayout.ts`.
 
-Генерируемый выход содержит:
-- Координаты всех размещённых городов
-- Размеры доски
-- Смещение и размер фона SVG
-- Готовый TypeScript код для использования в приложении
+## Формат вывода
+
+```ts
+const europeCities: Record<string, { x: number; y: number; label: { dx: number; dy: number } }> = {
+  London: { x: 309, y: 392, label: { dx: -90, dy: -10 } },
+  // ...
+};
+```
 

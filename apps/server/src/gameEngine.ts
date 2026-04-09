@@ -158,7 +158,7 @@ export class GameEngine {
   initGame(roomId: string, players: Player[], mapId: string, settings: GameSettings): GameState {
     this.trainDeck = buildTrainDeck();
     this.discardDeck = [];
-    const map = MAPS[mapId] ?? MAPS.usa;
+    const map = MAPS[mapId] ?? MAPS.europe;
     this.destinationDeck = shuffle([...map.destinationDeck]);
 
     const seededPlayers = players.map((p) => {
@@ -478,7 +478,7 @@ export class GameEngine {
         throw new Error("У вас не осталось станций");
       }
 
-      const map = MAPS[state.mapId] ?? MAPS.usa;
+      const map = MAPS[state.mapId] ?? MAPS.europe;
       if (!map.cities.includes(city)) {
         throw new Error("Город не найден на карте");
       }

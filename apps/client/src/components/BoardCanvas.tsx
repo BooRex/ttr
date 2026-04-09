@@ -134,7 +134,7 @@ export const BoardCanvas = ({
   const [animNowMs, setAnimNowMs] = useState<number>(0);
   const [bgImage, setBgImage] = useState<HTMLImageElement | null>(null);
 
-  const layout = MAP_LAYOUTS[mapId] ?? MAP_LAYOUTS.usa;
+  const layout = MAP_LAYOUTS[mapId] ?? MAP_LAYOUTS.europe;
   const BOARD_W = layout.board.width;
   const BOARD_H = layout.board.height;
   const CITY_POINTS = useMemo(() => {
@@ -321,20 +321,7 @@ export const BoardCanvas = ({
               listening={false}
             />
           ) : (
-            <>
-              <Rect x={0} y={0} width={BOARD_W} height={BOARD_H} fill="#0b1e36" />
-              {layout.landPolygons.map((poly, i) => (
-                <Line
-                  key={`land-${i}`}
-                  points={poly.flatMap((p) => [p.x, p.y])}
-                  fill="#265d37"
-                  stroke="#7b8f5b"
-                  strokeWidth={2}
-                  opacity={0.9}
-                  closed
-                />
-              ))}
-            </>
+            <Rect x={0} y={0} width={BOARD_W} height={BOARD_H} fill="#0b1e36" />
           )}
         </Layer>
 

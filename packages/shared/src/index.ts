@@ -1,4 +1,3 @@
-import { usaMap } from "./maps/usa.js";
 import { europeMap } from "./maps/europe.js";
 export { getMinRequiredLocomotives, getStationBuildCost } from "./routeRules.js";
 
@@ -201,7 +200,6 @@ export const TRAIN_COLORS: Exclude<CardColor, "locomotive">[] = [
 
 
 export const MAPS: Record<string, MapDefinition> = {
-  usa: usaMap,
   europe: europeMap
 };
 

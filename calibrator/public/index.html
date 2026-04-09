@@ -1,340 +1,61 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ru">
 <head>
-<meta charset="UTF-8">
-<title>City Calibration Tool</title>
-<style>
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { background: #0f172a; color: #f1f5f9; font-family: monospace; display: flex; height: 100vh; overflow: hidden; }
-
-  #sidebar {
-    width: 280px; flex-shrink: 0; display: flex; flex-direction: column;
-    background: #1e293b; border-right: 1px solid #334155; overflow: hidden;
-  }
-
-  #sidebar h2 { padding: 10px 12px; background: #0f172a; font-size: 0.85rem; color: #94a3b8; }
-
-  #city-list { flex: 1; overflow-y: auto; }
-  .city-item {
-    padding: 6px 12px; cursor: pointer; font-size: 0.78rem;
-    border-bottom: 1px solid #1e3a5f;
-    display: flex; align-items: center; gap: 8px;
-  }
-  .city-item.active { background: #1e3a8a; color: #93c5fd; }
-  .city-item.done { background: #14532d22; color: #86efac; }
-  .city-item.done::after { content: ' ✓'; color: #4ade80; }
-  .dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
-
-  #controls { padding: 10px; border-top: 1px solid #334155; display: flex; flex-direction: column; gap: 6px; }
-  button {
-    padding: 8px 10px; border-radius: 6px; border: 1px solid #475569;
-    background: #334155; color: #f1f5f9; cursor: pointer; font-size: 0.78rem;
-  }
-  button:hover { background: #475569; }
-  button.danger { border-color: #ef4444; background: #7f1d1d44; color: #fca5a5; }
-  button.primary { border-color: #3b82f6; background: #1e3a8a; color: #bfdbfe; }
-
-  #output-area {
-    padding: 8px 12px; font-size: 0.65rem; background: #0f172a;
-    border-top: 1px solid #334155; height: 140px; overflow-y: auto;
-    white-space: pre; color: #7dd3fc;
-  }
-
-  #map-area { flex: 1; position: relative; overflow: hidden; }
-
-  #map-img {
-    position: absolute; top: 0; left: 0;
-    transform-origin: top left;
-    user-select: none; pointer-events: none;
-  }
-
-  #hit-layer {
-    position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-    cursor: crosshair;
-  }
-
-  #dots-layer { position: absolute; top: 0; left: 0; pointer-events: none; }
-
-  .placed-dot {
-    position: absolute; transform: translate(-50%, -50%);
-    width: 10px; height: 10px; border-radius: 50%;
-    border: 2px solid white; box-shadow: 0 0 6px rgba(0,0,0,0.8);
-  }
-  .placed-label {
-    position: absolute; transform: translate(6px, -50%);
-    font-size: 10px; color: #fde047; white-space: nowrap;
-    text-shadow: 0 0 4px black, 0 0 4px black;
-  }
-
-  #cursor-info {
-    position: absolute; bottom: 6px; right: 8px;
-    font-size: 0.7rem; color: #64748b; pointer-events: none;
-  }
-
-  #hint {
-    position: absolute; top: 8px; left: 50%; transform: translateX(-50%);
-    background: rgba(0,0,0,0.7); padding: 4px 12px; border-radius: 20px;
-    font-size: 0.75rem; color: #fde047; pointer-events: none;
-    transition: opacity 0.3s;
-  }
-</style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Europe Cities Calibrator</title>
+  <link rel="stylesheet" href="/styles.css">
 </head>
 <body>
+  <div id="sidebar">
+    <h2>🗺 Europe Cities Calibrator</h2>
+    <div class="subtitle">Drag города и label offsets для `europeCities`</div>
 
-<div id="sidebar">
-  <h2>🗺 City Calibration — click on map</h2>
-  <div id="city-list"></div>
-  <div id="controls">
-    <div style="font-size:0.7rem; color:#64748b; margin-bottom:2px;">
-      Zoom: <input id="zoom-input" type="range" min="30" max="200" value="100" style="width:120px; vertical-align:middle"> <span id="zoom-val">100%</span>
+    <div id="city-list"></div>
+
+    <div id="controls">
+      <div class="control-row">
+        <label>
+          Zoom
+          <input id="zoom-input" type="range" min="30" max="180" value="100">
+        </label>
+        <label>
+          Mode
+          <select id="mode-select">
+            <option value="both" selected>both</option>
+            <option value="city">city</option>
+            <option value="label">label</option>
+          </select>
+        </label>
+      </div>
+
+      <div class="control-row">
+        <button id="copy-output-btn" class="primary">📋 Copy europeCities</button>
+        <button id="undo-btn" class="warn">↩ Restore defaults</button>
+      </div>
+
+      <div class="control-row">
+        <button id="reset-city-btn">Reset city</button>
+        <button id="reset-label-btn">Reset label</button>
+      </div>
+
+      <div style="font-size:0.7rem;color:#94a3b8;">Current zoom: <span id="zoom-value">100%</span></div>
     </div>
-    <button class="primary" onclick="generateOutput()">📋 Generate TypeScript</button>
-    <button onclick="undoLast()">↩ Undo last</button>
-    <button class="danger" onclick="resetAll()">🗑 Reset all</button>
+
+    <div id="output-area">Нажми "Copy europeCities" чтобы получить объект для `europeLayout.ts`.</div>
   </div>
-  <div id="output-area">← click "Generate TypeScript" after placing all cities</div>
-</div>
 
-<div id="map-area">
-  <img id="map-img" src="/assets/maps/europe.svg" draggable="false">
-  <canvas id="hit-layer"></canvas>
-  <div id="dots-layer"></div>
-  <div id="cursor-info">x: 0, y: 0 | svgX: 0, svgY: 0</div>
-  <div id="hint">Select a city from the list, then click its location on the map</div>
-</div>
+  <div id="map-area">
+    <div id="canvas-wrap">
+      <img id="map-img" src="/assets/maps/europe.svg" alt="Europe map" draggable="false">
+      <div id="overlay" class="mode-both"></div>
+    </div>
+    <div id="cursor-info">svg: 0, 0 | board: 0, 0</div>
+  </div>
 
-<script>
-const CITIES = [
-  "Edinburgh","London","Amsterdam","Bruxelles","Dieppe","Paris","Brest",
-  "Essen","Frankfurt","Berlin","Copenhagen","Stockholm",
-  "Zurich","Munich","Vienna","Budapest","Warszawa",
-  "Riga","Petrograd","Smolensk","Moskva","Kyiv","Kharkov",
-  "Bucharest","Sofia","Athina","Sarajevo","Zagreb",
-  "Venezia","Roma","Brindisi","Palermo",
-  "Barcelona","Madrid","Cadiz","Lisboa","Marseille",
-  "Constantinople","Ankara","Smyrna","Erzurum","Sochi","Sevastopol","Rostov"
-];
+  <div id="hint">Загружено</div>
 
-const COLORS = ["#ef4444","#3b82f6","#22c55e","#facc15","#a855f7","#f97316","#06b6d4","#ec4899","#14b8a6","#84cc16"];
-
-let placements = {}; // city -> {svgX, svgY}
-let activeCity = null;
-let zoom = 1.0;
-
-const img = document.getElementById('map-img');
-const mapArea = document.getElementById('map-area');
-const dotsLayer = document.getElementById('dots-layer');
-const hintEl = document.getElementById('hint');
-const cursorEl = document.getElementById('cursor-info');
-
-// Init city list
-const cityListEl = document.getElementById('city-list');
-CITIES.forEach((city, i) => {
-  const el = document.createElement('div');
-  el.className = 'city-item';
-  el.id = 'city-' + city.replace(/\s/g, '_');
-  const dot = document.createElement('span');
-  dot.className = 'dot';
-  dot.style.background = COLORS[i % COLORS.length];
-  el.appendChild(dot);
-  el.appendChild(document.createTextNode(city));
-  el.onclick = () => selectCity(city);
-  cityListEl.appendChild(el);
-});
-
-function selectCity(city) {
-  activeCity = city;
-  document.querySelectorAll('.city-item').forEach(el => el.classList.remove('active'));
-  const el = document.getElementById('city-' + city.replace(/\s/g, '_'));
-  if (el) { el.classList.add('active'); el.scrollIntoView({ block: 'nearest' }); }
-  hintEl.style.opacity = '1';
-  hintEl.textContent = `📍 Click on map to place: ${city}`;
-}
-
-// Select first unplaced city
-function selectNextUnplaced() {
-  const next = CITIES.find(c => !placements[c]);
-  if (next) selectCity(next);
-}
-selectNextUnplaced();
-
-// Mouse tracking on map
-const hitLayer = document.getElementById('hit-layer');
-hitLayer.style.position = 'absolute';
-hitLayer.style.top = '0';
-hitLayer.style.left = '0';
-hitLayer.style.width = '100%';
-hitLayer.style.height = '100%';
-
-function screenToSvg(screenX, screenY) {
-  const rect = mapArea.getBoundingClientRect();
-  const x = (screenX - rect.left) / zoom;
-  const y = (screenY - rect.top) / zoom;
-  return { x: Math.round(x), y: Math.round(y) };
-}
-
-mapArea.addEventListener('mousemove', (e) => {
-  const svg = screenToSvg(e.clientX, e.clientY);
-  cursorEl.textContent = `screen: ${e.clientX},${e.clientY} | svgX: ${svg.x}, svgY: ${svg.y}`;
-});
-
-mapArea.addEventListener('click', (e) => {
-  if (!activeCity) return;
-  const svg = screenToSvg(e.clientX, e.clientY);
-  placements[activeCity] = { svgX: svg.x, svgY: svg.y };
-  markCity(activeCity, svg.x, svg.y, e.clientX - mapArea.getBoundingClientRect().left, e.clientY - mapArea.getBoundingClientRect().top);
-  updateCityItem(activeCity);
-  selectNextUnplaced();
-  const remaining = CITIES.filter(c => !placements[c]).length;
-  if (remaining === 0) {
-    hintEl.textContent = '✅ All cities placed! Click "Generate TypeScript"';
-  }
-});
-
-function markCity(city, svgX, svgY, px, py) {
-  // Remove existing dot for this city
-  const existing = document.getElementById('dot-' + city.replace(/\s/g, '_'));
-  if (existing) existing.remove();
-  const existingLbl = document.getElementById('lbl-' + city.replace(/\s/g, '_'));
-  if (existingLbl) existingLbl.remove();
-
-  const idx = CITIES.indexOf(city);
-  const color = COLORS[idx % COLORS.length];
-
-  const dot = document.createElement('div');
-  dot.className = 'placed-dot';
-  dot.id = 'dot-' + city.replace(/\s/g, '_');
-  dot.style.left = px * zoom + 'px';
-  dot.style.top = py * zoom + 'px';
-  dot.style.background = color;
-  dotsLayer.appendChild(dot);
-
-  const lbl = document.createElement('div');
-  lbl.className = 'placed-label';
-  lbl.id = 'lbl-' + city.replace(/\s/g, '_');
-  lbl.style.left = (px * zoom) + 'px';
-  lbl.style.top = (py * zoom) + 'px';
-  lbl.textContent = city;
-  dotsLayer.appendChild(lbl);
-}
-
-function updateCityItem(city) {
-  const el = document.getElementById('city-' + city.replace(/\s/g, '_'));
-  if (!el) return;
-  el.classList.remove('active');
-  el.classList.add('done');
-  const p = placements[city];
-  el.title = `svgX: ${p.svgX}, svgY: ${p.svgY}`;
-}
-
-function redrawAllDots() {
-  dotsLayer.innerHTML = '';
-  for (const [city, pos] of Object.entries(placements)) {
-    const screenX = pos.svgX * zoom;
-    const screenY = pos.svgY * zoom;
-    markCity(city, pos.svgX, pos.svgY, pos.svgX, pos.svgY);
-    // Re-position based on SVG coords directly
-    const dot = document.getElementById('dot-' + city.replace(/\s/g, '_'));
-    if (dot) { dot.style.left = screenX + 'px'; dot.style.top = screenY + 'px'; }
-    const lbl = document.getElementById('lbl-' + city.replace(/\s/g, '_'));
-    if (lbl) { lbl.style.left = screenX + 'px'; lbl.style.top = screenY + 'px'; }
-  }
-}
-
-// Zoom
-const zoomInput = document.getElementById('zoom-input');
-const zoomVal = document.getElementById('zoom-val');
-zoomInput.addEventListener('input', () => {
-  zoom = parseInt(zoomInput.value) / 100;
-  zoomVal.textContent = zoomInput.value + '%';
-  img.style.transform = `scale(${zoom})`;
-  redrawAllDots();
-});
-
-function undoLast() {
-  const placed = CITIES.filter(c => placements[c]);
-  if (!placed.length) return;
-  const last = placed[placed.length - 1];
-  delete placements[last];
-  const dot = document.getElementById('dot-' + last.replace(/\s/g, '_'));
-  if (dot) dot.remove();
-  const lbl = document.getElementById('lbl-' + last.replace(/\s/g, '_'));
-  if (lbl) lbl.remove();
-  const el = document.getElementById('city-' + last.replace(/\s/g, '_'));
-  if (el) el.classList.remove('done');
-  selectCity(last);
-}
-
-function resetAll() {
-  if (!confirm('Reset all placements?')) return;
-  placements = {};
-  dotsLayer.innerHTML = '';
-  document.querySelectorAll('.city-item').forEach(el => { el.classList.remove('done', 'active'); el.title = ''; });
-  selectNextUnplaced();
-}
-
-function generateOutput() {
-  const placed = CITIES.filter(c => placements[c]);
-  if (!placed.length) { alert('No cities placed yet!'); return; }
-
-  let out = `// Placed ${placed.length}/${CITIES.length} cities\n`;
-  out += `// SVG: /assets/maps/europe.svg  viewBox: 0 0 1613 1417\n\n`;
-
-  // Compute bounding box
-  const xs = placed.map(c => placements[c].svgX);
-  const ys = placed.map(c => placements[c].svgY);
-  const minX = Math.min(...xs), maxX = Math.max(...xs);
-  const minY = Math.min(...ys), maxY = Math.max(...ys);
-  const padX = 50, padY = 50;
-  const offsetX = Math.max(0, minX - padX);
-  const offsetY = Math.max(0, minY - padY);
-  const boardW = maxX - offsetX + padX;
-  const boardH = maxY - offsetY + padY;
-
-  out += `// Bounding box: X ${minX}–${maxX}, Y ${minY}–${maxY}\n`;
-  out += `// Board: ${boardW} × ${boardH}, offset: (${offsetX}, ${offsetY})\n\n`;
-
-  out += `const EUROPE_BOARD = { width: ${boardW}, height: ${boardH} };\n`;
-  out += `const europeCityPoints: Record<string, Point> = {\n`;
-  for (const city of CITIES) {
-    if (placements[city]) {
-      const cx = placements[city].svgX - offsetX;
-      const cy = placements[city].svgY - offsetY;
-      out += `  "${city}": { x: ${cx}, y: ${cy} },\n`;
-    } else {
-      out += `  // "${city}": NOT PLACED\n`;
-    }
-  }
-  out += `};\n\n`;
-  out += `// backgroundOffset: { x: ${offsetX}, y: ${offsetY} }\n`;
-  out += `// backgroundSvgSize: { width: 1613, height: 1417 }\n`;
-
-  document.getElementById('output-area').textContent = out;
-
-  // Also copy to clipboard
-  navigator.clipboard.writeText(out).then(() => {
-    hintEl.textContent = '📋 Copied to clipboard!';
-    hintEl.style.opacity = '1';
-  }).catch(() => {});
-}
-
-// Load saved state from localStorage
-try {
-  const saved = JSON.parse(localStorage.getItem('ttr-calibration') || '{}');
-  for (const [city, pos] of Object.entries(saved)) {
-    if (CITIES.includes(city) && pos.svgX !== undefined) {
-      placements[city] = pos;
-      updateCityItem(city);
-    }
-  }
-  redrawAllDots();
-} catch(e) {}
-
-// Auto-save
-setInterval(() => {
-  localStorage.setItem('ttr-calibration', JSON.stringify(placements));
-}, 2000);
-</script>
+  <script type="module" src="/calibrator.js"></script>
 </body>
 </html>
 
