@@ -37,6 +37,7 @@
     "room": "Room",
     "marketTitle": "Draw a card — market or deck",
     "drawDeck": "Draw from deck",
+    "lastDrawn": "Last drawn",
     "routes": "Destinations",
     "drawRoutesConfirmTitle": "Confirm action",
     "drawRoutesConfirmBody": "This action cannot be undone. Your turn will be spent.",
@@ -69,6 +70,7 @@
     "scoreHelpTitle": "How scoring works",
     "scoreRoutes": "Route length points",
     "scoreLength": "Route length {length}",
+    "scoreLengthOverSix": "For lengths 7 and 8: 18 and 21 points respectively.",
     "scoreDestinations": "Destination tickets",
     "scoreDestinationsHint": "At game end completed tickets add points, incomplete tickets subtract points.",
     "scoreStations": "Stations",
@@ -81,7 +83,10 @@
     "noScoreHistory": "No score changes yet",
     "buildStation": "Build station",
     "stationCostCards": "cards required: {count}",
-    "noStationsLeft": "No stations left"
+    "noStationsLeft": "No stations left",
+    "selectedOption": "Selected combination is ready",
+    "routeReady": "Route completed",
+    "routeNotReady": "Route not completed"
   },
   "errors": {
     "enterNickname": "Enter nickname",

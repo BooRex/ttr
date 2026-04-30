@@ -15,3 +15,5 @@ export {
   type RouteHighlight,
 } from "./highlights";
 
+export { isDestinationCompleted } from "./destinationStatus";
+

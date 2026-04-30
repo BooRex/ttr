@@ -37,6 +37,7 @@
     "room": "Комната",
     "marketTitle": "Взять карту — рынок или колода",
     "drawDeck": "Взять из колоды",
+    "lastDrawn": "Последние карты",
     "routes": "Маршруты",
     "drawRoutesConfirmTitle": "Подтвердите действие",
     "drawRoutesConfirmBody": "Это действие нельзя отменить. Ваш ход будет потрачен.",
@@ -69,6 +70,7 @@
     "scoreHelpTitle": "Как считаются очки",
     "scoreRoutes": "Очки за длину маршрута",
     "scoreLength": "Маршрут длиной {length}",
+    "scoreLengthOverSix": "Для длины 7 и 8: 18 и 21 очко соответственно.",
     "scoreDestinations": "Карты маршрутов",
     "scoreDestinationsHint": "В конце игры за выполненные направления начисляются очки, за невыполненные — снимаются.",
     "scoreStations": "Станции",
@@ -81,7 +83,10 @@
     "noScoreHistory": "Пока нет изменений очков",
     "buildStation": "Построить станцию",
     "stationCostCards": "нужно карт: {count}",
-    "noStationsLeft": "Станции закончились"
+    "noStationsLeft": "Станции закончились",
+    "selectedOption": "Выбранная комбинация готова к постройке",
+    "routeReady": "Маршрут выполнен",
+    "routeNotReady": "Маршрут не выполнен"
   },
   "errors": {
     "enterNickname": "Введите ник",

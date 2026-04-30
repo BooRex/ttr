@@ -14,7 +14,7 @@ export const HandCards = ({ cards }: Props) => {
   const sorted = (Object.entries(counts) as [CardColor, number][]).sort(([, ca], [, cb]) => cb - ca);
 
   return (
-    <div className="grid h-full w-full grid-cols-5 grid-rows-2 gap-2">
+    <div className="grid h-full w-full grid-cols-5 grid-rows-2 gap-2" data-hand-cards-anchor="true">
       {sorted.map(([color, count]) => (
         <CardChip key={color} color={color} count={count} size="panel" fluid />
       ))}

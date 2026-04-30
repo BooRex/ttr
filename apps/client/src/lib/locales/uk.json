@@ -37,6 +37,7 @@
     "room": "Кімната",
     "marketTitle": "Взяти карту — ринок або колода",
     "drawDeck": "Взяти з колоди",
+    "lastDrawn": "Останні карти",
     "routes": "Маршрути",
     "drawRoutesConfirmTitle": "Підтвердьте дію",
     "drawRoutesConfirmBody": "Цю дію не можна скасувати. Ваш хід буде витрачено.",
@@ -69,6 +70,7 @@
     "scoreHelpTitle": "Як рахуються очки",
     "scoreRoutes": "Очки за довжину маршруту",
     "scoreLength": "Маршрут довжиною {length}",
+    "scoreLengthOverSix": "Для довжин 7 і 8: 18 і 21 очко відповідно.",
     "scoreDestinations": "Карти маршрутів",
     "scoreDestinationsHint": "Наприкінці гри за виконані напрямки додаються очки, за невиконані — віднімаються.",
     "scoreStations": "Станції",
@@ -81,7 +83,10 @@
     "noScoreHistory": "Поки немає змін очок",
     "buildStation": "Побудувати станцію",
     "stationCostCards": "потрібно карт: {count}",
-    "noStationsLeft": "Станції закінчились"
+    "noStationsLeft": "Станції закінчились",
+    "selectedOption": "Обрана комбінація готова до побудови",
+    "routeReady": "Маршрут виконано",
+    "routeNotReady": "Маршрут не виконано"
   },
   "errors": {
     "enterNickname": "Введіть нік",

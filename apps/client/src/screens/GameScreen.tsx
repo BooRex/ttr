@@ -1,5 +1,5 @@
-import { memo } from "react";
-import type { DestinationCard, CardColor, GameState } from "@ttr/shared";
+import { memo, useCallback, useEffect, useRef, useState } from "react";
+import type { DestinationCard, CardColor, GameState, GameEvent } from "@ttr/shared";
 import { GameTopbar } from "../widgets/game-topbar";
 import { GameBoardSlot } from "../widgets/game-board";
 import { GameRightPanel } from "../widgets/game-right-panel";
@@ -11,7 +11,8 @@ import type { ClaimOpt } from "../entities/game/claimOptions";
 import { EventLog } from "../components/EventLog";
 import { ScoringHelpModal } from "../components/ScoringHelpModal";
 import { t, type Lang } from "../lib/i18n";
-import { PLAYER_COLORS } from "../lib/colors";
+import { CARD_CFG, PLAYER_COLORS } from "../lib/colors";
+import { LocomotiveStatIcon } from "../components/StatIcons";
 
 interface GameScreenProps {
   game: GameState;
@@ -59,6 +60,18 @@ interface GameScreenProps {
   onBackToLobby: () => void;
 }
 
+type DeckDrawFxState = {
+  id: number;
+  startX: number;
+  startY: number;
+  targetX: number;
+  targetY: number;
+  cardW: number;
+  cardH: number;
+  cards: CardColor[];
+  phase: "reveal" | "fly" | "settle";
+};
+
 const GameScreenComponent = ({
   game,
   lang,
@@ -104,6 +117,9 @@ const GameScreenComponent = ({
   onSetLang,
   onBackToLobby,
 }: GameScreenProps) => {
+  const [deckDrawFx, setDeckDrawFx] = useState<DeckDrawFxState | null>(null);
+  const processedDrawEventIdsRef = useRef<Set<string>>(new Set());
+  const drawFxQueueRef = useRef<CardColor[][]>([]);
   const canUseLeftActions =
     (isMyTurn && !game.finished && (!pendingChoice || isMyPendingChoice)) ||
     Boolean(selectedRouteId);
@@ -117,8 +133,85 @@ const GameScreenComponent = ({
   const finalStandings = game.finished
     ? [...game.finalStandings].sort((a, b) => b.points - a.points)
     : [];
-  const leftFinalPlayers = finalStandings.filter((_, idx) => idx % 2 === 0);
-  const rightFinalPlayers = finalStandings.filter((_, idx) => idx % 2 === 1);
+
+  const startNextDeckDrawFx = useCallback((cardsOverride?: CardColor[]) => {
+    const cards = cardsOverride ?? drawFxQueueRef.current.shift();
+    if (!cards || cards.length === 0) return;
+    const deckBtn = document.querySelector("[data-draw-deck-btn='true']") as HTMLElement | null;
+    const handAnchor = document.querySelector("[data-hand-cards-anchor='true']") as HTMLElement | null;
+    if (!deckBtn || !handAnchor) return;
+
+    const deckRect = deckBtn.getBoundingClientRect();
+    const handRect = handAnchor.getBoundingClientRect();
+
+    const cardW = Math.max(28, Math.min(46, Math.round(deckRect.width * 0.34)));
+    const cardH = Math.round(cardW * 1.5);
+    const startX = deckRect.left + (deckRect.width - cardW) / 2;
+    const startY = deckRect.top - cardH - 6;
+    const targetX = handRect.left + handRect.width * 0.5 - cardW / 2;
+    const targetY = handRect.top + handRect.height * 0.45 - cardH / 2;
+
+    setDeckDrawFx({
+      id: Date.now(),
+      startX,
+      startY,
+      targetX,
+      targetY,
+      cardW,
+      cardH,
+      cards,
+      phase: "reveal",
+    });
+  }, []);
+
+  useEffect(() => {
+    if (!game.started || game.finished) return;
+    const newDeckDrawEvents = (game.events ?? [])
+      .filter((event): event is Extract<GameEvent, { type: "draw_card" }> => event.type === "draw_card")
+      .filter((event) => (
+        event.sessionToken === sessionToken
+        && event.from === "deck"
+        && Boolean(event.cardColor)
+        && !processedDrawEventIdsRef.current.has(event.id)
+      ));
+
+    if (newDeckDrawEvents.length === 0) return;
+
+    for (const event of newDeckDrawEvents) {
+      processedDrawEventIdsRef.current.add(event.id);
+    }
+
+    const cards = newDeckDrawEvents
+      .slice()
+      .reverse()
+      .map((event) => event.cardColor as CardColor);
+
+    drawFxQueueRef.current.push(cards);
+    if (!deckDrawFx) {
+      startNextDeckDrawFx();
+    }
+  }, [deckDrawFx, game.events, game.finished, game.started, sessionToken, startNextDeckDrawFx]);
+
+  useEffect(() => {
+    if (!deckDrawFx) return;
+    if (deckDrawFx.phase === "reveal") {
+      const t1 = window.setTimeout(() => {
+        setDeckDrawFx((prev) => (prev ? { ...prev, phase: "fly" } : null));
+      }, 1000);
+      return () => window.clearTimeout(t1);
+    }
+    if (deckDrawFx.phase === "fly") {
+      const t2 = window.setTimeout(() => {
+        setDeckDrawFx((prev) => (prev ? { ...prev, phase: "settle" } : null));
+      }, 620);
+      return () => window.clearTimeout(t2);
+    }
+    const t3 = window.setTimeout(() => {
+      setDeckDrawFx(null);
+      startNextDeckDrawFx();
+    }, 1000);
+    return () => window.clearTimeout(t3);
+  }, [deckDrawFx, startNextDeckDrawFx]);
 
   return (
     <div className="game-screen" data-testid="game-screen">
@@ -151,12 +244,12 @@ const GameScreenComponent = ({
           {game.finished ? (
             <PanelShell title={t(lang, "results.finalStandings")} className="card side-card h-full">
               <div className="final-side-list">
-                {leftFinalPlayers.map((standing, idx) => {
+                {finalStandings.map((standing, idx) => {
                   const playerIndex = game.players.findIndex((p) => p.sessionToken === standing.sessionToken);
                   const color = PLAYER_COLORS[Math.max(0, playerIndex) % PLAYER_COLORS.length] ?? "#94a3b8";
                   return (
                     <div key={standing.sessionToken} className="final-side-item">
-                      <span className="final-side-rank">#{idx * 2 + 1}</span>
+                      <span className="final-side-rank">#{idx + 1}</span>
                       <span className="final-side-name" style={{ color }}>{standing.nickname}</span>
                       <strong className="final-side-points">{standing.points} {t(lang, "ui.pointsShort")}</strong>
                       <span className="final-side-meta">
@@ -261,21 +354,7 @@ const GameScreenComponent = ({
         {game.finished ? (
           <aside className="game-side side-right">
             <PanelShell title={t(lang, "ui.gameOver")} className="card side-card h-full">
-              <div className="final-side-list">
-                {rightFinalPlayers.map((standing, idx) => {
-                  const playerIndex = game.players.findIndex((p) => p.sessionToken === standing.sessionToken);
-                  const color = PLAYER_COLORS[Math.max(0, playerIndex) % PLAYER_COLORS.length] ?? "#94a3b8";
-                  return (
-                    <div key={standing.sessionToken} className="final-side-item">
-                      <span className="final-side-rank">#{idx * 2 + 2}</span>
-                      <span className="final-side-name" style={{ color }}>{standing.nickname}</span>
-                      <strong className="final-side-points">{standing.points} {t(lang, "ui.pointsShort")}</strong>
-                      <span className="final-side-meta">
-                        {standing.completedDestinations}/{standing.totalDestinations}
-                      </span>
-                    </div>
-                  );
-                })}
+              <div className="h-full flex items-center justify-center">
                 <button type="button" className="mt-2" onClick={onBackToLobby}>
                   {t(lang, "ui.toLobby")}
                 </button>
@@ -326,6 +405,50 @@ const GameScreenComponent = ({
         sessionToken={sessionToken}
         onClose={onToggleScoringHelp}
       />
+
+      {deckDrawFx && (
+        <div className="deck-draw-fx-layer" aria-hidden="true">
+          {deckDrawFx.cards.map((color, idx) => {
+            const spread = deckDrawFx.cardW + 8;
+            const centeredOffset = idx - (deckDrawFx.cards.length - 1) / 2;
+            const fromX = deckDrawFx.startX + centeredOffset * spread;
+            const fromY = deckDrawFx.startY;
+            const toX = deckDrawFx.targetX + centeredOffset * spread;
+            const toY = deckDrawFx.targetY;
+            const dx = toX - fromX;
+            const dy = toY - fromY;
+            const cfg = CARD_CFG[color];
+            return (
+              <span
+                key={`${deckDrawFx.id}-${idx}`}
+                className={[
+                  "deck-draw-fx-card",
+                  deckDrawFx.phase === "reveal" ? "deck-draw-fx-card-reveal" : "",
+                  deckDrawFx.phase === "fly" ? "deck-draw-fx-card-fly" : "",
+                  deckDrawFx.phase === "settle" ? "deck-draw-fx-card-settle" : "",
+                ].join(" ")}
+                style={{
+                  left: `${fromX}px`,
+                  top: `${fromY}px`,
+                  width: `${deckDrawFx.cardW}px`,
+                  height: `${deckDrawFx.cardH}px`,
+                  transform: (deckDrawFx.phase === "fly" || deckDrawFx.phase === "settle")
+                    ? `translate(${dx}px, ${dy}px) scale(0.92)`
+                    : "translate(0,0) scale(1)",
+                  transitionDelay: deckDrawFx.phase === "fly" ? `${idx * 35}ms` : "0ms",
+                  background: cfg.gradient ?? cfg.bg,
+                  borderColor: cfg.border,
+                  color: cfg.text,
+                }}
+              >
+                <span className="deck-draw-fx-icon">
+                  {color === "locomotive" ? <LocomotiveStatIcon className="w-5 h-5" /> : cfg.icon}
+                </span>
+              </span>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 };

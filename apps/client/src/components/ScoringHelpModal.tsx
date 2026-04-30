@@ -9,7 +9,7 @@ type Props = {
   onClose: () => void;
 };
 
-const ROUTE_LENGTHS = [1, 2, 3, 4, 5, 6] as const;
+const ROUTE_LENGTHS = [1, 2, 3, 4, 5, 6, 7, 8] as const;
 
 export const ScoringHelpModal = ({ open, lang, game, sessionToken, onClose }: Props) => {
   if (!open) return null;
@@ -86,6 +86,7 @@ export const ScoringHelpModal = ({ open, lang, game, sessionToken, onClose }: Pr
               </div>
             ))}
           </div>
+          <p className="mt-2 text-xs text-slate-400">{t(lang, "ui.scoreLengthOverSix")}</p>
         </div>
 
         <div className="rounded-xl border border-slate-700 bg-slate-900/80 p-3 space-y-2 text-sm leading-5">

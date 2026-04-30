@@ -52,7 +52,7 @@ const StationOptionBtn = ({
       className={[
         "flex items-center gap-1.5 rounded-xl border-2 px-2 py-1.5 w-full transition-all text-left",
         selected
-          ? "border-indigo-300 bg-indigo-500/15"
+          ? "border-indigo-300 bg-indigo-500/20 shadow-[0_0_0_1px_rgba(165,180,252,.35)]"
           : "border-slate-700 bg-slate-800/70 hover:border-slate-500",
       ].join(" ")}
     >
@@ -84,7 +84,6 @@ const StationOptionBtn = ({
 };
 
 export const StationPanel = ({ game, me, lang, selectedCity, onSelectCity, onBuildStation }: Props) => {
-  const [selectedStationCity, setSelectedStationCity] = useState<string>("");
   const [selectedStationOpt, setSelectedStationOpt] = useState<ClaimOpt | null>(null);
 
   const isEurope = game.mapId === "europe";
@@ -112,21 +111,16 @@ export const StationPanel = ({ game, me, lang, selectedCity, onSelectCity, onBui
     });
   }, [hand, isEurope, stationCost, stationsLeft]);
 
-  useEffect(() => {
-    if (!selectedStationCity || !availableStationCities.includes(selectedStationCity)) {
-      const fallback = availableStationCities[0] ?? "";
-      setSelectedStationCity(fallback);
-      if (fallback) onSelectCity?.(fallback);
-    }
-  }, [availableStationCities, onSelectCity, selectedStationCity]);
+  const selectedStationCity = useMemo(() => {
+    if (selectedCity && availableStationCities.includes(selectedCity)) return selectedCity;
+    return availableStationCities[0] ?? "";
+  }, [availableStationCities, selectedCity]);
 
   useEffect(() => {
-    if (!selectedCity) return;
-    if (!availableStationCities.includes(selectedCity)) return;
-    if (selectedCity !== selectedStationCity) {
-      setSelectedStationCity(selectedCity);
-    }
-  }, [availableStationCities, selectedCity, selectedStationCity]);
+    if (!selectedStationCity) return;
+    if (selectedCity === selectedStationCity) return;
+    onSelectCity?.(selectedStationCity);
+  }, [onSelectCity, selectedCity, selectedStationCity]);
 
   useEffect(() => {
     if (!selectedStationOpt || !stationClaimOpts.some((opt) => opt.baseColor === selectedStationOpt.baseColor && opt.locoCount === selectedStationOpt.locoCount)) {
@@ -157,7 +151,6 @@ export const StationPanel = ({ game, me, lang, selectedCity, onSelectCity, onBui
           <select
             value={selectedStationCity}
             onChange={(e) => {
-              setSelectedStationCity(e.target.value);
               onSelectCity?.(e.target.value);
             }}
             className="w-full bg-slate-900 border border-slate-600 rounded-lg px-2 py-2 text-sm"
@@ -183,6 +176,12 @@ export const StationPanel = ({ game, me, lang, selectedCity, onSelectCity, onBui
               ))
             )}
           </div>
+
+          {selectedStationOpt && (
+            <div className="rounded-xl border border-indigo-400/60 bg-indigo-500/10 px-3 py-2 text-xs text-indigo-100">
+              {t(lang, "ui.selectedOption")}
+            </div>
+          )}
 
           <button
             type="button"

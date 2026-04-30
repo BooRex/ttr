@@ -4,6 +4,7 @@ import { DestinationBadge } from "../../../components/DestinationBadge";
 import { EventLog } from "../../../components/EventLog";
 import { PanelShell } from "../../../components/PanelShell";
 import { t, type Lang } from "../../../lib/i18n";
+import { isDestinationCompleted } from "../../../entities/game/model";
 
 type Props = {
   game: GameState;
@@ -47,15 +48,30 @@ export const GameRightPanel = ({
             <p className="hint">—</p>
           ) : (
             <div className="my-destinations my-destinations-vertical">
-              {destinations.map((d) => (
-                <DestinationBadge
-                  key={d.id}
-                  card={d}
-                  lang={lang}
-                  onMouseEnter={() => onHoverDestination(d)}
-                  onMouseLeave={onLeaveDestination}
-                />
-              ))}
+              {destinations.map((d) => {
+                const completed = isDestinationCompleted(game, me.sessionToken, d);
+                return (
+                  <div key={d.id} className="flex items-center gap-2">
+                    <DestinationBadge
+                      card={d}
+                      lang={lang}
+                      onMouseEnter={() => onHoverDestination(d)}
+                      onMouseLeave={onLeaveDestination}
+                    />
+                    <span
+                      className={[
+                        "ml-auto inline-flex h-6 w-6 items-center justify-center rounded-full border text-sm font-black",
+                        completed
+                          ? "border-emerald-400 bg-emerald-500/20 text-emerald-300"
+                          : "border-slate-600 bg-slate-800 text-slate-500",
+                      ].join(" ")}
+                      title={completed ? t(lang, "ui.routeReady") : t(lang, "ui.routeNotReady")}
+                    >
+                      {completed ? "✓" : "•"}
+                    </span>
+                  </div>
+                );
+              })}
             </div>
           )}
         </PanelShell>

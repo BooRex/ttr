@@ -419,6 +419,62 @@ button:not(:disabled):active { opacity: 0.7; }
   background: #111827;
 }
 
+.deck-draw-fx-layer {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 200;
+}
+
+.deck-draw-fx-card {
+  position: fixed;
+  border-radius: 10px;
+  border: 2px solid #94a3b8;
+  box-shadow:
+    0 8px 18px rgba(2, 6, 23, 0.45),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  opacity: 0;
+  transform-origin: center;
+  transition:
+    transform 620ms cubic-bezier(0.18, 0.75, 0.2, 1),
+    opacity 220ms ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.deck-draw-fx-card::after {
+  content: "";
+  position: absolute;
+  inset: 4px;
+  border-radius: 7px;
+  border: 1px solid rgba(255, 255, 255, 0.45);
+}
+
+.deck-draw-fx-icon {
+  position: relative;
+  z-index: 2;
+  font-size: 20px;
+  line-height: 1;
+  font-weight: 900;
+}
+
+.deck-draw-fx-card-reveal {
+  opacity: 0.98;
+}
+
+.deck-draw-fx-card-fly {
+  opacity: 0.95;
+}
+
+.deck-draw-fx-card-settle {
+  opacity: 0.96;
+  box-shadow:
+    0 0 0 2px rgba(255, 255, 255, 0.18),
+    0 10px 20px rgba(2, 6, 23, 0.45),
+    inset 0 1px 0 rgba(255, 255, 255, 0.24);
+}
+
 .meta-value {
   font-weight: 900;
   color: #e2e8f0;

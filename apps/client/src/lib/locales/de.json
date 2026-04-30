@@ -37,6 +37,7 @@
     "room": "Raum",
     "marketTitle": "Karte ziehen — Markt oder Stapel",
     "drawDeck": "Vom Stapel ziehen",
+    "lastDrawn": "Zuletzt gezogen",
     "routes": "Ziele",
     "drawRoutesConfirmTitle": "Aktion bestätigen",
     "drawRoutesConfirmBody": "Diese Aktion kann nicht rückgängig gemacht werden. Dein Zug wird verbraucht.",
@@ -69,6 +70,7 @@
     "scoreHelpTitle": "So werden Punkte gezählt",
     "scoreRoutes": "Punkte nach Streckenlänge",
     "scoreLength": "Strecke mit Länge {length}",
+    "scoreLengthOverSix": "Für Längen 7 und 8: 18 bzw. 21 Punkte.",
     "scoreDestinations": "Zielkarten",
     "scoreDestinationsHint": "Am Spielende bringen erfüllte Zielkarten Punkte, unerfüllte ziehen Punkte ab.",
     "scoreStations": "Bahnhöfe",
@@ -81,7 +83,10 @@
     "noScoreHistory": "Noch keine Punkteänderungen",
     "buildStation": "Bahnhof bauen",
     "stationCostCards": "benötigte Karten: {count}",
-    "noStationsLeft": "Keine Bahnhöfe mehr übrig"
+    "noStationsLeft": "Keine Bahnhöfe mehr übrig",
+    "selectedOption": "Gewählte Kombination ist bereit",
+    "routeReady": "Route erfüllt",
+    "routeNotReady": "Route nicht erfüllt"
   },
   "errors": {
     "enterNickname": "Nickname eingeben",

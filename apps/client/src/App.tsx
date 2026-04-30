@@ -134,7 +134,8 @@ export const App = () => {
   const createRoomAction = useMemo(() => withUiBlock(createRoom), [withUiBlock, createRoom]);
   const joinRoomAction = useMemo(() => withUiBlock(joinRoom), [withUiBlock, joinRoom]);
   const startGameAction = useMemo(() => withUiBlock(gameLogic.startGame), [withUiBlock, gameLogic.startGame]);
-  const drawCardAction = useMemo(() => withUiBlock(gameLogic.drawCardFrom), [withUiBlock, gameLogic.drawCardFrom]);
+  // Для добора карт не блокируем весь экран: это вызывало заметный "блим" перед анимацией.
+  const drawCardAction = useMemo(() => gameLogic.drawCardFrom, [gameLogic.drawCardFrom]);
   const claimRouteAction = useMemo(() => withUiBlock(gameLogic.claimRoute), [withUiBlock, gameLogic.claimRoute]);
   const buildStationAction = useMemo(() => withUiBlock(gameLogic.buildStation), [withUiBlock, gameLogic.buildStation]);
   const drawDestinationsAction = useMemo(() => withUiBlock(gameLogic.drawDestinations), [withUiBlock, gameLogic.drawDestinations]);
@@ -161,6 +162,10 @@ export const App = () => {
     setRoomId("");
     setError("");
   };
+
+  const handleReloadToLobby = useCallback(() => {
+    window.location.reload();
+  }, []);
 
 
   return (
@@ -260,7 +265,7 @@ export const App = () => {
           onConfirmDestinations={confirmDestinationsAction}
           onDeselectRoute={() => gameLogic.setSelectedRouteId("")}
           onSetLang={setLang}
-          onBackToLobby={handleExitGame}
+          onBackToLobby={handleReloadToLobby}
         />
       )}
 

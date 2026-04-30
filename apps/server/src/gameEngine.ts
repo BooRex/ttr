@@ -243,7 +243,14 @@ export class GameEngine {
 
       activePlayer.hand.push(card);
       state.log.unshift(`${activePlayer.nickname} берет карту`);
-      pushEvent(state, { id: eventId(), type: "draw_card", sessionToken: activePlayer.sessionToken, nickname: activePlayer.nickname });
+      pushEvent(state, {
+        id: eventId(),
+        type: "draw_card",
+        sessionToken: activePlayer.sessionToken,
+        nickname: activePlayer.nickname,
+        cardColor: card.color,
+        from: typeof openIndex === "number" ? "open" : "deck",
+      });
       state.turnActionState.drawCardsTaken += 1;
       const shouldEndTurn = typeof openIndex === "number" || state.turnActionState.drawCardsTaken >= 2;
       if (shouldEndTurn) {

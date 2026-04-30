@@ -230,6 +230,12 @@ export class RoomService {
       };
     }
 
+    masked.events = masked.events.map((event) => {
+      if (event.type !== "draw_card") return event;
+      if (event.sessionToken === sessionToken) return event;
+      return { ...event, cardColor: undefined };
+    });
+
     return masked;
   }
 

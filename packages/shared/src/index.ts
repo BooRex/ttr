@@ -50,7 +50,7 @@ export type Route = {
 
 export type GameEvent =
   | { id: string; type: "game_started" }
-  | { id: string; type: "draw_card"; sessionToken: string; nickname: string }
+  | { id: string; type: "draw_card"; sessionToken: string; nickname: string; cardColor?: CardColor; from?: "deck" | "open" }
   | { id: string; type: "draw_destinations"; sessionToken: string; nickname: string }
   | { id: string; type: "choose_destinations"; sessionToken: string; nickname: string; keepCount: number }
   | { id: string; type: "claim_route"; sessionToken: string; nickname: string; routeId: string; from: string; to: string; points?: number }
@@ -195,7 +195,7 @@ export const MAPS: Record<string, MapDefinition> = {
 };
 
 export const pointsForRouteLength = (length: number): number => {
-  const table: Record<number, number> = { 1: 1, 2: 2, 3: 4, 4: 7, 5: 10, 6: 15 };
+  const table: Record<number, number> = { 1: 1, 2: 2, 3: 4, 4: 7, 5: 10, 6: 15, 7: 18, 8: 21 };
   return table[length] ?? 0;
 };
 

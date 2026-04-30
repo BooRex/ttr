@@ -41,6 +41,6 @@ export const PLAYER_COLORS = [
   "#3b82f6", // seat 1 — blue
   "#22c55e", // seat 2 — green
   "#facc15", // seat 3 — bright yellow
-  "#111827", // seat 4 — black
+  "#a78bfa", // seat 4 — lilac
 ] as const;
 

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { GameEngine } from "../src/gameEngine.js";
-import { MAPS } from "@ttr/shared";
+import { MAPS, pointsForRouteLength } from "@ttr/shared";
 
 const sameRoutePair = (
   route: { from: string; to: string },
@@ -57,8 +57,17 @@ describe("GameEngine", () => {
     engine.drawCard(state, "a");
     expect(state.players[0]?.hand.length).toBe(handBefore + 1);
     expect(state.activePlayerIndex).toBe(0);
+    expect(state.events[0]?.type).toBe("draw_card");
+    if (state.events[0]?.type === "draw_card") {
+      expect(state.events[0].cardColor).toBeTruthy();
+    }
     engine.drawCard(state, "a");
     expect(state.activePlayerIndex).toBe(1);
+  });
+
+  it("считает очки для маршрутов длиной 7 и 8", () => {
+    expect(pointsForRouteLength(7)).toBe(18);
+    expect(pointsForRouteLength(8)).toBe(21);
   });
 
   it("завершает ход после добора открытой карты рынка", () => {
