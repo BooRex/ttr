@@ -1,4 +1,4 @@
-import type { DestinationCard, GameState, Player } from "@ttr/shared";
+import type { DestinationCard, GameState, Player, TrainCard } from "@ttr/shared";
 import { HandCards } from "../../../components/HandCards";
 import { DestinationBadge } from "../../../components/DestinationBadge";
 import { EventLog } from "../../../components/EventLog";
@@ -9,6 +9,7 @@ import { isDestinationCompleted } from "../../../entities/game/model";
 type Props = {
   game: GameState;
   me: Player | undefined;
+  handCards?: TrainCard[];
   winner: Player | null;
   lang: Lang;
   onHoverDestination: (d: DestinationCard) => void;
@@ -21,6 +22,7 @@ type Props = {
 export const GameRightPanel = ({
   game,
   me,
+  handCards,
   winner,
   lang,
   onHoverDestination,
@@ -35,7 +37,7 @@ export const GameRightPanel = ({
     <aside className="game-side side-right">
       {me && !me.isSpectator && (
         <PanelShell title={t(lang, "ui.yourCards")} className="player-hand card side-card side-ratio-eq">
-          <HandCards cards={me.hand} />
+          <HandCards cards={handCards ?? me.hand} />
         </PanelShell>
       )}
 
@@ -51,24 +53,19 @@ export const GameRightPanel = ({
               {destinations.map((d) => {
                 const completed = isDestinationCompleted(game, me.sessionToken, d);
                 return (
-                  <div key={d.id} className="flex items-center gap-2">
+                  <div
+                    key={d.id}
+                    className={[
+                      "my-destination-row",
+                      completed ? "is-completed" : "",
+                    ].join(" ").trim()}
+                  >
                     <DestinationBadge
                       card={d}
                       lang={lang}
                       onMouseEnter={() => onHoverDestination(d)}
                       onMouseLeave={onLeaveDestination}
                     />
-                    <span
-                      className={[
-                        "ml-auto inline-flex h-6 w-6 items-center justify-center rounded-full border text-sm font-black",
-                        completed
-                          ? "border-emerald-400 bg-emerald-500/20 text-emerald-300"
-                          : "border-slate-600 bg-slate-800 text-slate-500",
-                      ].join(" ")}
-                      title={completed ? t(lang, "ui.routeReady") : t(lang, "ui.routeNotReady")}
-                    >
-                      {completed ? "✓" : "•"}
-                    </span>
                   </div>
                 );
               })}

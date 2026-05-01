@@ -1,5 +1,5 @@
 import { memo, useCallback, useEffect, useRef, useState } from "react";
-import type { DestinationCard, CardColor, GameState, GameEvent } from "@ttr/shared";
+import type { DestinationCard, CardColor, GameState, GameEvent, TrainCard } from "@ttr/shared";
 import { GameTopbar } from "../widgets/game-topbar";
 import { GameBoardSlot } from "../widgets/game-board";
 import { GameRightPanel } from "../widgets/game-right-panel";
@@ -118,8 +118,11 @@ const GameScreenComponent = ({
   onBackToLobby,
 }: GameScreenProps) => {
   const [deckDrawFx, setDeckDrawFx] = useState<DeckDrawFxState | null>(null);
+  const [displayedHandCards, setDisplayedHandCards] = useState<TrainCard[]>(me?.hand ?? []);
   const processedDrawEventIdsRef = useRef<Set<string>>(new Set());
   const drawFxQueueRef = useRef<CardColor[][]>([]);
+  const isHandBufferingRef = useRef(false);
+  const pendingHandCardsRef = useRef<TrainCard[] | null>(null);
   const canUseLeftActions =
     (isMyTurn && !game.finished && (!pendingChoice || isMyPendingChoice)) ||
     Boolean(selectedRouteId);
@@ -134,12 +137,23 @@ const GameScreenComponent = ({
     ? [...game.finalStandings].sort((a, b) => b.points - a.points)
     : [];
 
+  const flushBufferedHandCards = useCallback(() => {
+    isHandBufferingRef.current = false;
+    if (pendingHandCardsRef.current) {
+      setDisplayedHandCards(pendingHandCardsRef.current);
+      pendingHandCardsRef.current = null;
+    }
+  }, []);
+
   const startNextDeckDrawFx = useCallback((cardsOverride?: CardColor[]) => {
-    const cards = cardsOverride ?? drawFxQueueRef.current.shift();
-    if (!cards || cards.length === 0) return;
+    const cards = cardsOverride ?? drawFxQueueRef.current[0];
+    if (!cards || cards.length === 0) return false;
     const deckBtn = document.querySelector("[data-draw-deck-btn='true']") as HTMLElement | null;
     const handAnchor = document.querySelector("[data-hand-cards-anchor='true']") as HTMLElement | null;
-    if (!deckBtn || !handAnchor) return;
+    if (!deckBtn || !handAnchor) return false;
+    if (!cardsOverride) {
+      drawFxQueueRef.current.shift();
+    }
 
     const deckRect = deckBtn.getBoundingClientRect();
     const handRect = handAnchor.getBoundingClientRect();
@@ -162,6 +176,7 @@ const GameScreenComponent = ({
       cards,
       phase: "reveal",
     });
+    return true;
   }, []);
 
   useEffect(() => {
@@ -186,11 +201,33 @@ const GameScreenComponent = ({
       .reverse()
       .map((event) => event.cardColor as CardColor);
 
+    isHandBufferingRef.current = true;
     drawFxQueueRef.current.push(cards);
     if (!deckDrawFx) {
-      startNextDeckDrawFx();
+      const started = startNextDeckDrawFx();
+      if (!started) {
+        drawFxQueueRef.current = [];
+        flushBufferedHandCards();
+      }
     }
-  }, [deckDrawFx, game.events, game.finished, game.started, sessionToken, startNextDeckDrawFx]);
+  }, [
+    deckDrawFx,
+    flushBufferedHandCards,
+    game.events,
+    game.finished,
+    game.started,
+    sessionToken,
+    startNextDeckDrawFx,
+  ]);
+
+  useEffect(() => {
+    const nextHand = me?.isSpectator ? [] : (me?.hand ?? []);
+    if (isHandBufferingRef.current) {
+      pendingHandCardsRef.current = nextHand;
+      return;
+    }
+    setDisplayedHandCards(nextHand);
+  }, [me?.hand, me?.isSpectator]);
 
   useEffect(() => {
     if (!deckDrawFx) return;
@@ -208,10 +245,20 @@ const GameScreenComponent = ({
     }
     const t3 = window.setTimeout(() => {
       setDeckDrawFx(null);
-      startNextDeckDrawFx();
+      const hasQueued = drawFxQueueRef.current.length > 0;
+      if (hasQueued) {
+        const started = startNextDeckDrawFx();
+        if (started) {
+          return;
+        }
+        drawFxQueueRef.current = [];
+        flushBufferedHandCards();
+        return;
+      }
+      flushBufferedHandCards();
     }, 1000);
     return () => window.clearTimeout(t3);
-  }, [deckDrawFx, startNextDeckDrawFx]);
+  }, [deckDrawFx, flushBufferedHandCards, startNextDeckDrawFx]);
 
   return (
     <div className="game-screen" data-testid="game-screen">
@@ -365,6 +412,7 @@ const GameScreenComponent = ({
           <GameRightPanel
             game={game}
             me={me}
+            handCards={displayedHandCards}
             winner={winner}
             lang={lang}
             onHoverDestination={onHoverDestination}

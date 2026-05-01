@@ -50,10 +50,10 @@ const StationOptionBtn = ({
       type="button"
       onClick={onClick}
       className={[
-        "flex items-center gap-1.5 rounded-xl border-2 px-2 py-1.5 w-full transition-all text-left",
+        "relative my-0.5 flex items-center gap-1.5 rounded-xl border-2 px-2 py-1.5 w-full transition-all text-left",
         selected
-          ? "border-indigo-300 bg-indigo-500/20 shadow-[0_0_0_1px_rgba(165,180,252,.35)]"
-          : "border-slate-700 bg-slate-800/70 hover:border-slate-500",
+          ? "border-emerald-300 bg-emerald-700/35 ring-2 ring-emerald-300/35 shadow-[inset_0_0_0_1px_rgba(16,185,129,.45)]"
+          : "border-slate-700 bg-slate-800/70 hover:bg-slate-700/70 hover:border-slate-500",
       ].join(" ")}
     >
       <div className="flex gap-1 shrink-0">
@@ -177,11 +177,6 @@ export const StationPanel = ({ game, me, lang, selectedCity, onSelectCity, onBui
             )}
           </div>
 
-          {selectedStationOpt && (
-            <div className="rounded-xl border border-indigo-400/60 bg-indigo-500/10 px-3 py-2 text-xs text-indigo-100">
-              {t(lang, "ui.selectedOption")}
-            </div>
-          )}
 
           <button
             type="button"
