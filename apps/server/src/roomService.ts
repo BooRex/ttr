@@ -28,7 +28,7 @@ export class RoomService {
       mapId: room.mapId,
       playersCount: room.players.length,
       maxPlayers: room.maxPlayers,
-      started: room.started,
+      started: room.started && !room.state?.finished,
       timerSeconds: room.timerSeconds
     }));
   }
@@ -130,11 +130,48 @@ export class RoomService {
 
   reconnect(roomId: string, sessionToken: string): GameState {
     const room = this.rooms.get(roomId);
-    if (!room || !room.state) throw new Error("Игра не найдена");
+    if (!room) throw new Error("Игра не найдена");
+
+    // До старта игры room.state отсутствует: возвращаем waiting-state,
+    // чтобы reconnect не падал сразу после room:create / room:join.
+    if (!room.state) {
+      const inPlayers = room.players.some((p) => p.sessionToken === sessionToken);
+      const inSpectators = room.spectators.some((p) => p.sessionToken === sessionToken);
+      if (!inPlayers && !inSpectators) throw new Error("Сессия не найдена");
+      return this.toWaitingState(room);
+    }
+
     const inPlayers = room.state.players.some((p) => p.sessionToken === sessionToken);
     const inSpectators = room.state.spectators.some((p) => p.sessionToken === sessionToken);
     if (!inPlayers && !inSpectators) throw new Error("Сессия не найдена");
     return this.maskStateForViewer(room.state, sessionToken);
+  }
+
+  private toWaitingState(room: Room): GameState {
+    return {
+      roomId: room.roomId,
+      mapId: room.mapId,
+      started: room.started,
+      finished: false,
+      routes: [],
+      stations: [],
+      players: room.players,
+      spectators: room.spectators,
+      activePlayerIndex: 0,
+      openCards: [],
+      trainDeckCount: 0,
+      discardDeckCount: 0,
+      destinationDeckCount: 0,
+      pendingDestinationChoice: null,
+      lastRoundTriggered: false,
+      lastRoundEndIndex: null,
+      winnerSessionToken: null,
+      finalStandings: [],
+      log: ["Ожидание старта"],
+      events: [],
+      settings: { maxPlayers: room.maxPlayers, turnTimerSeconds: room.timerSeconds },
+      turnActionState: { action: null, drawCardsTaken: 0 },
+    };
   }
 
   drawCard(roomId: string, sessionToken: string, openIndex?: number): GameState {
@@ -233,6 +270,7 @@ export class RoomService {
     masked.events = masked.events.map((event) => {
       if (event.type !== "draw_card") return event;
       if (event.sessionToken === sessionToken) return event;
+      if (event.from === "open") return event;
       return { ...event, cardColor: undefined };
     });
 

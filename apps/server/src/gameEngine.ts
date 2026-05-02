@@ -229,12 +229,17 @@ export class GameEngine {
 
     try {
       let card: TrainCard | null;
+      let replacementColor: CardColor | undefined;
       if (typeof openIndex === "number") {
         card = state.openCards[openIndex] ?? null;
         if (!card) throw new Error("Карта не найдена");
-        state.openCards.splice(openIndex, 1);
         const replacement = this.drawTrainCard();
-        if (replacement) state.openCards.push(replacement);
+        if (replacement) {
+          state.openCards[openIndex] = replacement;
+          replacementColor = replacement.color;
+        } else {
+          state.openCards.splice(openIndex, 1);
+        }
       } else {
         card = this.drawTrainCard();
       }
@@ -250,6 +255,8 @@ export class GameEngine {
         nickname: activePlayer.nickname,
         cardColor: card.color,
         from: typeof openIndex === "number" ? "open" : "deck",
+        openIndex: typeof openIndex === "number" ? openIndex : undefined,
+        replacementColor,
       });
       state.turnActionState.drawCardsTaken += 1;
       const shouldEndTurn = typeof openIndex === "number" || state.turnActionState.drawCardsTaken >= 2;

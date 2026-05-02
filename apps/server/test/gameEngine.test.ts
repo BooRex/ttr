@@ -89,6 +89,28 @@ describe("GameEngine", () => {
     expect(state.activePlayerIndex).toBe(1);
   });
 
+  it("не сдвигает остальные открытые слоты при доборе из рынка", () => {
+    const engine = new GameEngine();
+    const state = engine.initGame(
+      "ROOM_OPEN_STABLE_SLOTS",
+      [
+        { sessionToken: "a", nickname: "A", wagonsLeft: 45, hand: [], destinations: [], points: 0 },
+        { sessionToken: "b", nickname: "B", wagonsLeft: 45, hand: [], destinations: [], points: 0 }
+      ],
+      "europe",
+      { maxPlayers: 5, turnTimerSeconds: null }
+    );
+
+    const before = [...state.openCards];
+    engine.drawCard(state, "a", 1);
+
+    expect(state.openCards[0]).toBe(before[0]);
+    expect(state.openCards[2]).toBe(before[2]);
+    expect(state.openCards[3]).toBe(before[3]);
+    expect(state.openCards[4]).toBe(before[4]);
+    expect(state.openCards[1]).not.toBe(before[1]);
+  });
+
   it("дает взять карты маршрутов и подтвердить выбор", () => {
     const engine = new GameEngine();
     const state = engine.initGame(

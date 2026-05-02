@@ -50,7 +50,7 @@ export type Route = {
 
 export type GameEvent =
   | { id: string; type: "game_started" }
-  | { id: string; type: "draw_card"; sessionToken: string; nickname: string; cardColor?: CardColor; from?: "deck" | "open" }
+  | { id: string; type: "draw_card"; sessionToken: string; nickname: string; cardColor?: CardColor; from?: "deck" | "open"; openIndex?: number; replacementColor?: CardColor }
   | { id: string; type: "draw_destinations"; sessionToken: string; nickname: string }
   | { id: string; type: "choose_destinations"; sessionToken: string; nickname: string; keepCount: number }
   | { id: string; type: "claim_route"; sessionToken: string; nickname: string; routeId: string; from: string; to: string; points?: number }
