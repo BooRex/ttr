@@ -48,6 +48,7 @@ const ClaimOptionBtn = ({
     <button
       onClick={onClick}
       className={[
+        "claim-option-btn",
         "flex items-center gap-2 rounded-xl border-2 px-2.5 py-2 w-full transition-all duration-100 text-left",
         "cursor-pointer active:scale-[0.98]",
         selected
@@ -78,6 +79,7 @@ const BigActionBtn = ({
     onClick={onClick}
     disabled={disabled}
     className={[
+      "action-big-btn",
       "flex items-center justify-between gap-2 rounded-2xl border-2",
       "px-3 py-2.5 font-semibold select-none transition-all duration-100",
       "min-h-17 flex-1",
@@ -348,7 +350,7 @@ export const ActionPanel = ({
 
   // ── My turn, no route selected → main actions ────────────────────────────
   return (
-    <div className="space-y-4">
+    <div className="action-panel space-y-4">
 
       {/* Other actions */}
       <div className="flex flex-col gap-2.5">

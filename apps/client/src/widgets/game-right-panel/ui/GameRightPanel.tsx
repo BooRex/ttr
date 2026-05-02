@@ -36,7 +36,11 @@ export const GameRightPanel = ({
   return (
     <aside className="game-side side-right">
       {me && !me.isSpectator && (
-        <PanelShell title={t(lang, "ui.yourCards")} className="player-hand card side-card side-ratio-eq">
+        <PanelShell
+          title={t(lang, "ui.yourCards")}
+          infoText={t(lang, "ui.panelHelp.yourCards")}
+          className="player-hand card side-card side-ratio-eq"
+        >
           <HandCards cards={handCards ?? me.hand} />
         </PanelShell>
       )}
@@ -44,6 +48,7 @@ export const GameRightPanel = ({
       {me && !me.isSpectator && (
         <PanelShell
           title={t(lang, "ui.yourRoutes")}
+          infoText={t(lang, "ui.panelHelp.yourRoutes")}
           className="scoreboard card side-card side-ratio-eq"
         >
           {destinations.length === 0 ? (
@@ -76,6 +81,7 @@ export const GameRightPanel = ({
 
       <PanelShell
         title={t(lang, "ui.events")}
+        infoText={t(lang, "ui.panelHelp.events")}
         className="scoreboard card side-card desktop-events side-ratio-eq"
       >
         <EventLog

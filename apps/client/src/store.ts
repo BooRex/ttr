@@ -12,7 +12,7 @@ type AppStore = {
   setSessionToken: (token: string) => void;
   setRooms: (rooms: RoomSummary[]) => void;
   setRoomId: (roomId: string) => void;
-  setGame: (game: GameState) => void;
+  setGame: (game: GameState | null) => void;
   setError: (error: string) => void;
 };
 
@@ -36,7 +36,7 @@ export const useAppStore = create<AppStore>((set) => ({
   },
   setRooms: (rooms) => set({ rooms }),
   setRoomId: (roomId) => set({ roomId }),
-  setGame: (game) => set({ game, roomId: game.roomId }),
+  setGame: (game) => set({ game, roomId: game?.roomId ?? "" }),
   setError: (error) => set({ error })
 }));
 

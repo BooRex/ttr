@@ -2,51 +2,54 @@ import type { GameState } from "@ttr/shared";
 import { PLAYER_COLORS } from "../../../lib/colors";
 import { t, type Lang } from "../../../lib/i18n";
 import { PlayerPillMeta } from "../../../components/PlayerPillMeta";
+import { getLogoSrc } from "../../../lib/logoAssets";
 
 type Props = {
   game: GameState;
   lang: Lang;
-  isMyTurn: boolean;
-  turnPulse: boolean;
   sessionToken: string;
   highlightOwnerSessionToken: string | null;
   onHoverOwner: (sessionToken: string | null) => void;
   onToggleOwner: (sessionToken: string) => void;
   onSetLang: (lang: Lang) => void;
   onOpenScoringHelp: () => void;
+  onOpenTutorial: () => void;
 };
 
 export const GameTopbar = ({
   game,
   lang,
-  isMyTurn,
-  turnPulse,
   sessionToken,
   highlightOwnerSessionToken,
   onHoverOwner,
   onToggleOwner,
   onSetLang,
   onOpenScoringHelp,
+  onOpenTutorial,
 }: Props) => {
-  const activePlayer = game.players[game.activePlayerIndex];
   const finalRoundTrigger = game.lastRoundTriggered && game.lastRoundEndIndex !== null
     ? game.players[game.lastRoundEndIndex]
     : null;
 
   return (
     <div className="game-topbar">
-      <span className="room-badge">{game.roomId}</span>
+      <div className="topbar-room">
+        <img
+          src={getLogoSrc(lang)}
+          alt="logo"
+          className="topbar-mini-logo"
+          width={40}
+          height={16}
+          loading="eager"
+          decoding="async"
+          draggable={false}
+        />
+        <span className="room-badge">{game.roomId}</span>
+      </div>
 
       {game.lastRoundTriggered && !game.finished && (
         <span className="final-round-badge" title={finalRoundTrigger ? `${finalRoundTrigger.nickname} ${t(lang, "ui.finalRoundTriggeredBy")}` : ""}>
           🔔 {t(lang, "ui.finalRound")}
-        </span>
-      )}
-
-      {activePlayer && !game.finished && (
-        <span className={["text-xs inline-flex items-center gap-1.5", turnPulse ? "turn-pulse text-green-300" : "text-slate-300"].join(" ")}>
-          <span className="w-2.5 h-2.5 rounded-full" style={{ background: PLAYER_COLORS[game.activePlayerIndex] }} />
-          {isMyTurn ? t(lang, "ui.yourTurn") : t(lang, "ui.waiting")}
         </span>
       )}
 
@@ -66,6 +69,7 @@ export const GameTopbar = ({
           return (
             <button
               key={player.sessionToken}
+              data-player-pill-token={player.sessionToken}
               className={["player-pill", isActive ? "active" : "", isHighlighted ? "highlighted" : ""].join(" ")}
               style={pillStyle}
               onMouseEnter={() => onHoverOwner(player.sessionToken)}
@@ -108,6 +112,16 @@ export const GameTopbar = ({
         onClick={onOpenScoringHelp}
       >
         {t(lang, "ui.scoreHelp")}
+      </button>
+
+      <button
+        type="button"
+        className="topbar-control text-base font-black rounded-xl border border-[#64748b] bg-[#1e293b] text-slate-200"
+        title={t(lang, "ui.tutorialHint")}
+        aria-label={t(lang, "ui.tutorial")}
+        onClick={onOpenTutorial}
+      >
+        ?
       </button>
     </div>
   );

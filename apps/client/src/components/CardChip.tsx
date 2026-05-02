@@ -14,6 +14,7 @@ const SIZE: Record<Size, { w: string; h: string; icon: string; count: string }> 
 type Props = {
   color: CardColor;
   count?: number;
+  pulseCount?: boolean;
   size?: Size;
   onClick?: () => void;
   disabled?: boolean;
@@ -25,7 +26,7 @@ type Props = {
 };
 
 export const CardChip = ({
-  color, count, size = "md", onClick, disabled, selected, dimmed, fluid,
+  color, count, pulseCount, size = "md", onClick, disabled, selected, dimmed, fluid,
 }: Props) => {
   const cfg = CARD_CFG[color];
   const s   = SIZE[size];
@@ -70,15 +71,22 @@ export const CardChip = ({
       )}
 
       {/* Icon — always centered in the card */}
-      <span aria-hidden="true" className={`${s.icon} leading-none z-10`}>
-        {isLoco ? <LocomotiveStatIcon className="w-6 h-6" /> : cfg.icon}
+      <span aria-hidden="true" className="inline-flex w-6 h-6 items-center justify-center z-10">
+        {isLoco ? (
+          <LocomotiveStatIcon className="w-6 h-6" />
+        ) : (
+          <span className={`${s.icon} leading-none inline-flex w-6 h-6 items-center justify-center`}>{cfg.icon}</span>
+        )}
       </span>
 
       {/* Count badge — bottom-right corner */}
       {count !== undefined && (
         <span
           aria-hidden="true"
-          className={`text-[10px] font-black tabular-nums absolute bottom-0.5 right-0.5 rounded-full w-5 h-5 inline-flex items-center justify-center leading-none bg-slate-800 text-white border border-slate-500/60 z-50`}
+          className={[
+            "text-[10px] font-black tabular-nums absolute bottom-0.5 right-0.5 rounded-full w-5 h-5 inline-flex items-center justify-center leading-none bg-slate-800 text-white border border-slate-500/60 z-[320]",
+            pulseCount ? "card-chip-count-pulse" : "",
+          ].join(" ")}
         >
           {count}
         </span>

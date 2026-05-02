@@ -11,6 +11,7 @@
     "test:watch": "vitest"
   },
   "dependencies": {
+    "@fontsource/inter": "^5.2.8",
     "@ttr/shared": "0.1.0",
     "konva": "^9.3.20",
     "react": "^19.1.1",

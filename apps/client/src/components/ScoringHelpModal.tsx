@@ -6,20 +6,24 @@ type Props = {
   lang: Lang;
   game: GameState;
   sessionToken: string;
+  targetSessionToken?: string;
   onClose: () => void;
 };
 
 const ROUTE_LENGTHS = [1, 2, 3, 4, 5, 6, 7, 8] as const;
 
-export const ScoringHelpModal = ({ open, lang, game, sessionToken, onClose }: Props) => {
+export const ScoringHelpModal = ({ open, lang, game, sessionToken, targetSessionToken, onClose }: Props) => {
   if (!open) return null;
 
-  const myFinalStanding = game.finalStandings.find((standing) => standing.sessionToken === sessionToken);
+  const scopeSessionToken = targetSessionToken ?? sessionToken;
+  const scopedPlayer = game.players.find((player) => player.sessionToken === scopeSessionToken);
+
+  const scopedFinalStanding = game.finalStandings.find((standing) => standing.sessionToken === scopeSessionToken);
 
   const scoreHistory = [...(game.events ?? [])]
     .reverse()
     .flatMap((event) => {
-      if (event.type === "claim_route" && event.sessionToken === sessionToken) {
+      if (event.type === "claim_route" && event.sessionToken === scopeSessionToken) {
         const delta = event.points ?? 0;
         return [{
           id: event.id,
@@ -27,7 +31,7 @@ export const ScoringHelpModal = ({ open, lang, game, sessionToken, onClose }: Pr
           delta,
         }];
       }
-      if (event.type === "build_station" && event.sessionToken === sessionToken) {
+      if (event.type === "build_station" && event.sessionToken === scopeSessionToken) {
         return [{
           id: event.id,
           label: `${t(lang, "events.buildStation", { city: cityLabel(lang, event.city) })}`,
@@ -37,28 +41,39 @@ export const ScoringHelpModal = ({ open, lang, game, sessionToken, onClose }: Pr
       return [];
     });
 
-  if (game.finished && myFinalStanding) {
+  if (game.finished && scopedFinalStanding) {
     scoreHistory.push({
-      id: `destinations-${sessionToken}`,
-      label: `${t(lang, "ui.scoreDestinations")}: ${myFinalStanding.completedDestinations}/${myFinalStanding.totalDestinations}`,
-      delta: myFinalStanding.destinationPointsDelta,
+      id: `destinations-${scopeSessionToken}`,
+      label: `${t(lang, "ui.scoreDestinations")}: ${scopedFinalStanding.completedDestinations}/${scopedFinalStanding.totalDestinations}`,
+      delta: scopedFinalStanding.destinationPointsDelta,
     });
 
-    if (myFinalStanding.stationPointsBonus !== 0) {
+    if (scopedFinalStanding.stationPointsBonus !== 0) {
       scoreHistory.push({
-        id: `stations-${sessionToken}`,
+        id: `stations-${scopeSessionToken}`,
         label: t(lang, "ui.scoreStations"),
-        delta: myFinalStanding.stationPointsBonus,
+        delta: scopedFinalStanding.stationPointsBonus,
       });
     }
 
-    if (myFinalStanding.longestPathBonus !== 0) {
+    if (scopedFinalStanding.longestPathBonus !== 0) {
       scoreHistory.push({
-        id: `longest-path-${sessionToken}`,
-        label: `${t(lang, "ui.scoreLongestPath")}: ${myFinalStanding.longestPathLength}`,
-        delta: myFinalStanding.longestPathBonus,
+        id: `longest-path-${scopeSessionToken}`,
+        label: `${t(lang, "ui.scoreLongestPath")}: ${scopedFinalStanding.longestPathLength}`,
+        delta: scopedFinalStanding.longestPathBonus,
       });
     }
+  }
+
+  const knownTotal = scoreHistory.reduce((sum, item) => sum + item.delta, 0);
+  const playerPoints = scopedPlayer?.points ?? 0;
+  const otherDelta = playerPoints - knownTotal;
+  if (otherDelta !== 0) {
+    scoreHistory.push({
+      id: `other-${scopeSessionToken}`,
+      label: t(lang, "ui.scoreOtherAdjustments"),
+      delta: otherDelta,
+    });
   }
 
   let running = 0;
@@ -67,13 +82,15 @@ export const ScoringHelpModal = ({ open, lang, game, sessionToken, onClose }: Pr
     return { ...item, running };
   });
 
-  const me = game.players.find((player) => player.sessionToken === sessionToken);
-
   return (
     <div className="events-modal" role="dialog" aria-modal="true" aria-label={t(lang, "ui.scoreHelpTitle")}>
       <div className="events-modal-head">
         <h3>{t(lang, "ui.scoreHelpTitle")}</h3>
         <button type="button" onClick={onClose}>{t(lang, "ui.close")}</button>
+      </div>
+
+      <div className="px-1 pb-2 text-xs text-slate-400">
+        {t(lang, "results.player")}: <span className="text-slate-200 font-semibold">{scopedPlayer?.nickname ?? "—"}</span>
       </div>
 
       <div className="events-scroll-area text-slate-200">
@@ -86,7 +103,6 @@ export const ScoringHelpModal = ({ open, lang, game, sessionToken, onClose }: Pr
               </div>
             ))}
           </div>
-          <p className="mt-2 text-xs text-slate-400">{t(lang, "ui.scoreLengthOverSix")}</p>
         </div>
 
         <div className="rounded-xl border border-slate-700 bg-slate-900/80 p-3 space-y-2 text-sm leading-5">
@@ -114,7 +130,7 @@ export const ScoringHelpModal = ({ open, lang, game, sessionToken, onClose }: Pr
             </ol>
           )}
           <p className="text-sm text-slate-200 mt-2">
-            <strong>{t(lang, "ui.pointsShort")}: {me?.points ?? 0}</strong>
+            <strong>{t(lang, "ui.pointsShort")}: {playerPoints}</strong>
           </p>
         </div>
       </div>

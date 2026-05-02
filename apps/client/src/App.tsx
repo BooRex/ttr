@@ -37,10 +37,9 @@ export const App = () => {
 
   // ── Lobby form state ───────────────────────────────────────────────────────
   const [maxPlayers, setMaxPlayers] = useState<number>(GAME_DEFAULTS.MAX_PLAYERS);
-  const [timer, setTimer] = useState<number>(GAME_DEFAULTS.TIMER_DEFAULT);
-  const [mapId, setMapId] = useState<string>(GAME_DEFAULTS.MAP_DEFAULT);
   const [isEventsOpen, setIsEventsOpen] = useState(false);
   const [isScoringHelpOpen, setIsScoringHelpOpen] = useState(false);
+  const [isTutorialOpen, setIsTutorialOpen] = useState(false);
   const [hoveredPendingDestination, setHoveredPendingDestination] = useState<DestinationCard | null>(null);
   const [selectedStationCity, setSelectedStationCity] = useState("");
   const [isUiBlocked, setIsUiBlocked] = useState(false);
@@ -61,7 +60,7 @@ export const App = () => {
 
   const activePlayer = game?.players[game.activePlayerIndex] ?? null;
   const { turnPulse } = useTurnPulse(activePlayer?.sessionToken, sessionToken);
-  const { createRoom, joinRoom } = useLobbyLogic({ nickname, sessionToken });
+  const { createRoom, joinRoom } = useLobbyLogic({ nickname, sessionToken, lang });
   const gameLogic = useGameLogic({ game, roomId, sessionToken });
 
   const clearUiBlock = useCallback(() => {
@@ -83,10 +82,12 @@ export const App = () => {
     }, 8000);
   }, []);
 
-  const withUiBlock = useCallback(<T extends unknown[]>(fn: (...args: T) => void) => {
+  const withUiBlock = useCallback(<T extends unknown[]>(fn: (...args: T) => boolean | void) => {
     return (...args: T) => {
-      blockUiForRequest();
-      fn(...args);
+      const shouldBlock = fn(...args) !== false;
+      if (shouldBlock) {
+        blockUiForRequest();
+      }
     };
   }, [blockUiForRequest]);
 
@@ -159,7 +160,8 @@ export const App = () => {
   }, [gameStarted]);
 
   const handleExitGame = () => {
-    setRoomId("");
+    clearUiBlock();
+    setGame(null);
     setError("");
   };
 
@@ -169,6 +171,7 @@ export const App = () => {
 
 
   return (
+    <div className={gameStarted ? "app-shell app-shell-game" : "app-shell"}>
     <div className={gameStarted ? "page page-game" : "page"}>
       {/* Top controls (lang selector for lobby) */}
       {!gameStarted && (
@@ -193,10 +196,6 @@ export const App = () => {
           rooms={rooms}
           maxPlayers={maxPlayers}
           onMaxPlayersChange={setMaxPlayers}
-          timer={timer}
-          onTimerChange={setTimer}
-          mapId={mapId}
-          onMapIdChange={setMapId}
           lang={lang}
           onCreateRoom={createRoomAction}
           onJoinRoom={joinRoomAction}
@@ -229,6 +228,8 @@ export const App = () => {
           onToggleEvents={() => setIsEventsOpen((c) => !c)}
           isScoringHelpOpen={isScoringHelpOpen}
           onToggleScoringHelp={() => setIsScoringHelpOpen((c) => !c)}
+          isTutorialOpen={isTutorialOpen}
+          onToggleTutorial={() => setIsTutorialOpen((c) => !c)}
           me={gameLogic.me}
           activePlayer={gameLogic.activePlayer}
           winner={gameLogic.winner}
@@ -269,6 +270,7 @@ export const App = () => {
         />
       )}
 
+
       {/* Error message */}
       {error && <p className="error" style={{ marginTop: 8 }}>⚠ {error}</p>}
 
@@ -281,6 +283,7 @@ export const App = () => {
           <div className="global-ui-loader" role="status" aria-label="Loading" />
         </div>
       )}
+    </div>
     </div>
   );
 };

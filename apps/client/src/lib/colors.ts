@@ -8,7 +8,7 @@ export const CARD_CFG: Record<
   red:        { bg: "#b91c1c", text: "#fff",    border: "#ef4444", icon: "♥" },
   blue:       { bg: "#1d4ed8", text: "#fff",    border: "#60a5fa", icon: "✦" },
   green:      { bg: "#15803d", text: "#fff",    border: "#4ade80", icon: "♣" },
-  yellow:     { bg: "#a16207", text: "#fff",    border: "#facc15", icon: "★" },
+  yellow:     { bg: "#ca8a04", text: "#ffffff", border: "#fef08a", icon: "★" },
   black:      { bg: "#111827", text: "#f9fafb", border: "#6b7280", icon: "♠" },
   white:      { bg: "#e2e8f0", text: "#0f172a", border: "#f8fafc", icon: "✚" },
   orange:     { bg: "#c2410c", text: "#fff",    border: "#fb923c", icon: "◆" },
@@ -27,10 +27,10 @@ export const ROUTE_COLOR: Record<string, string> = {
   red:   "#ef4444",
   blue:  "#3b82f6",
   green: "#22c55e",
-  yellow:"#facc15",
+  yellow:"#fde047",
   black: "#0b0f14",
   white: "#ffffff",
-  orange:"#f97316",
+  orange:"#ea580c",
   pink:  "#ec4899",
   gray:  "#9ca3af",
 };
@@ -40,7 +40,7 @@ export const PLAYER_COLORS = [
   "#ef4444", // seat 0 — red
   "#3b82f6", // seat 1 — blue
   "#22c55e", // seat 2 — green
-  "#facc15", // seat 3 — bright yellow
+  "#fde047", // seat 3 — bright yellow
   "#a78bfa", // seat 4 — lilac
 ] as const;
 

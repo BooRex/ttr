@@ -39,15 +39,18 @@ export const useGameSession = ({
       onServerResponse?.();
     });
     socket.on("room:joined", (state) => {
+      setError("");
       setGame(state);
       setRoomId(state.roomId);
       onServerResponse?.();
     });
     socket.on("game:state", (state) => {
+      setError("");
       setGame(state);
       onServerResponse?.();
     });
     socket.on("reconnect:success", (state) => {
+      setError("");
       setGame(state);
       onServerResponse?.();
     });

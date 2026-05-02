@@ -37,6 +37,8 @@ export const buildClaimOptions = (
         const locoCount = route.length - colorCount;
         if (locoCount > locoInHand) continue;
         if (locoCount < minSpecialLocos) continue;
+        // Avoid duplicate visuals: pure locomotive combo should be represented once.
+        if (colorCount === 0) continue;
         if (colorCount === 0 && locoCount === 0) continue;
         options.push({ baseColor: color, colorCount, locoCount });
       }

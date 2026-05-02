@@ -85,6 +85,7 @@ const StationOptionBtn = ({
 
 export const StationPanel = ({ game, me, lang, selectedCity, onSelectCity, onBuildStation }: Props) => {
   const [selectedStationOpt, setSelectedStationOpt] = useState<ClaimOpt | null>(null);
+  const [isBuildStationConfirmOpen, setIsBuildStationConfirmOpen] = useState(false);
 
   const isEurope = game.mapId === "europe";
   const hand = me?.hand ?? [];
@@ -113,6 +114,8 @@ export const StationPanel = ({ game, me, lang, selectedCity, onSelectCity, onBui
 
   const selectedStationCity = useMemo(() => {
     if (selectedCity && availableStationCities.includes(selectedCity)) return selectedCity;
+    const preferredCity = "Budapest";
+    if (availableStationCities.includes(preferredCity)) return preferredCity;
     return availableStationCities[0] ?? "";
   }, [availableStationCities, selectedCity]);
 
@@ -148,19 +151,25 @@ export const StationPanel = ({ game, me, lang, selectedCity, onSelectCity, onBui
         </div>
       ) : (
         <>
-          <select
-            value={selectedStationCity}
-            onChange={(e) => {
-              onSelectCity?.(e.target.value);
-            }}
-            className="w-full bg-slate-900 border border-slate-600 rounded-lg px-2 py-2 text-sm"
-          >
-            {availableStationCities.map((city) => (
-              <option key={city} value={city}>{cityLabel(lang, city)}</option>
-            ))}
-          </select>
+          <div className="flex items-center gap-2">
+            <span
+              className="inline-flex h-3 w-3 rounded-full border border-sky-200 bg-sky-400 shadow-[0_0_0_2px_rgba(56,189,248,0.25)] shrink-0"
+              aria-hidden="true"
+            />
+            <select
+              value={selectedStationCity}
+              onChange={(e) => {
+                onSelectCity?.(e.target.value);
+              }}
+              className="w-full bg-slate-900 border border-slate-600 rounded-lg px-2 py-2 text-sm"
+            >
+              {availableStationCities.map((city) => (
+                <option key={city} value={city}>{cityLabel(lang, city)}</option>
+              ))}
+            </select>
+          </div>
 
-          <div className="station-panel-options">
+          <div className="station-panel-options px-2">
             {stationClaimOpts.length === 0 ? (
               <div className="rounded-xl border border-red-800/50 bg-red-900/20 px-3 py-2 text-sm text-red-300">
                 {t(lang, "ui.insufficientCards")}
@@ -184,11 +193,44 @@ export const StationPanel = ({ game, me, lang, selectedCity, onSelectCity, onBui
             disabled={!selectedStationCity || !selectedStationOpt || stationClaimOpts.length === 0 || drawInProgress}
             onClick={() => {
               if (!selectedStationCity || !selectedStationOpt) return;
-              onBuildStation(selectedStationCity, selectedStationOpt.baseColor, selectedStationOpt.locoCount);
+              setIsBuildStationConfirmOpen(true);
             }}
           >
             {t(lang, "ui.buildStation")}
           </button>
+
+          {isBuildStationConfirmOpen && (
+            <div className="fixed inset-0 z-120 bg-black/65 backdrop-blur-[1px] flex items-center justify-center p-4">
+              <div className="w-full max-w-md rounded-2xl border border-slate-600 bg-slate-900 p-4 space-y-3 shadow-2xl">
+                <h3 className="text-sm font-bold text-slate-100">
+                  {t(lang, "ui.buildStationConfirmTitle")}
+                </h3>
+                <p className="text-sm text-slate-300">
+                  {t(lang, "ui.buildStationConfirmBody")}
+                </p>
+                <div className="flex gap-2 justify-end pt-1">
+                  <button
+                    type="button"
+                    className="rounded-xl border border-slate-600 px-3 py-2 text-sm text-slate-300 hover:border-slate-400"
+                    onClick={() => setIsBuildStationConfirmOpen(false)}
+                  >
+                    {t(lang, "ui.cancel")}
+                  </button>
+                  <button
+                    type="button"
+                    className="rounded-xl border border-indigo-400 bg-indigo-500/20 px-3 py-2 text-sm font-bold text-indigo-200 hover:bg-indigo-500/30"
+                    onClick={() => {
+                      if (!selectedStationCity || !selectedStationOpt) return;
+                      setIsBuildStationConfirmOpen(false);
+                      onBuildStation(selectedStationCity, selectedStationOpt.baseColor, selectedStationOpt.locoCount);
+                    }}
+                  >
+                    {t(lang, "ui.confirm")}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </>
       )}
     </div>
