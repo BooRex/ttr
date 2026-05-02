@@ -1,9 +1,9 @@
 import { memo } from "react";
-import { MAPS } from "@ttr/shared";
 import { socket } from "../socket";
 import { t, type Lang } from "../lib/i18n";
-import { GAME_DEFAULTS, SOCKET_EVENTS } from "../lib/constants";
-import { LocomotiveStatIcon } from "../components/StatIcons";
+import { SOCKET_EVENTS } from "../lib/constants";
+import { LobbyLogo } from "../components/LobbyLogo";
+import { PlayerCountPicker } from "../components/PlayerCountPicker";
 
 interface LobbyScreenProps {
   nickname: string;
@@ -11,12 +11,8 @@ interface LobbyScreenProps {
   rooms: any[];
   maxPlayers: number;
   onMaxPlayersChange: (value: number) => void;
-  timer: number;
-  onTimerChange: (value: number) => void;
-  mapId: string;
-  onMapIdChange: (value: string) => void;
   lang: Lang;
-  onCreateRoom: (mapId: string, maxPlayers: number, timer: number) => void;
+  onCreateRoom: (maxPlayers: number) => void;
   onJoinRoom: (roomId: string, asSpectator: boolean) => void;
 }
 
@@ -26,71 +22,53 @@ const LobbyScreenComponent = ({
   rooms,
   maxPlayers,
   onMaxPlayersChange,
-  timer,
-  onTimerChange,
-  mapId,
-  onMapIdChange,
   lang,
   onCreateRoom,
   onJoinRoom,
 }: LobbyScreenProps) => {
+  const nicknameTrimmed = nickname.trim();
+  const isNicknameValid = nicknameTrimmed.length > 0;
+
   return (
-    <>
-      <h1><span className="inline-flex items-center gap-2"><LocomotiveStatIcon className="w-6 h-6" />Ticket to Ride</span></h1>
+    <div className="lobby-screen">
+      <h1 className="lobby-logo-title">
+        <LobbyLogo lang={lang} />
+      </h1>
 
       {/* Profile */}
-      <section className="card">
+      <section className="card lobby-card">
         <h2>{t(lang, "ui.profile")}</h2>
         <div className="row">
           <input
             data-testid="nickname-input"
+            className={`nickname-input ${isNicknameValid ? "" : "nickname-input-error"}`.trim()}
             value={nickname}
             onChange={(e) => onNicknameChange(e.target.value)}
             placeholder={t(lang, "ui.nickname")}
+            aria-invalid={!isNicknameValid}
+            aria-describedby="nickname-help"
             style={{ flex: 1 }}
           />
         </div>
+        {!isNicknameValid && (
+          <p id="nickname-help" className="field-error">
+            ⚠ {t(lang, "errors.enterNickname")}
+          </p>
+        )}
       </section>
 
       {/* Create / list rooms */}
-      <section className="card">
+      <section className="card lobby-card">
         <h2>{t(lang, "ui.lobby")}</h2>
-        <div className="row wrap">
-          <label>
-            {t(lang, "ui.players")}:
-            <input
-              type="number"
-              min={GAME_DEFAULTS.MIN_PLAYERS}
-              max={GAME_DEFAULTS.MAX_PLAYERS_LIMIT}
-              value={maxPlayers}
-              onChange={(e) => onMaxPlayersChange(Number(e.target.value || GAME_DEFAULTS.MAX_PLAYERS))}
-              style={{ width: 52 }}
-            />
-          </label>
-          <label>
-            {t(lang, "ui.timer")}:
-            <input
-              type="number"
-              min={0}
-              max={180}
-              value={timer}
-              onChange={(e) => onTimerChange(Number(e.target.value || 0))}
-              style={{ width: 60 }}
-            />
-          </label>
-          <label>
-            {t(lang, "ui.map")}:
-            <select value={mapId} onChange={(e) => onMapIdChange(e.target.value)}>
-              {Object.values(MAPS).map((m) => (
-                <option key={m.id} value={m.id}>
-                  {m.name}
-                </option>
-              ))}
-            </select>
-          </label>
+        <div className="lobby-settings">
+          <span className="lobby-settings-label">{t(lang, "ui.players")}</span>
+          <PlayerCountPicker value={maxPlayers} onChange={onMaxPlayersChange} />
+        </div>
+        <div className="row wrap lobby-actions">
           <button
             data-testid="create-room-btn"
-            onClick={() => onCreateRoom(mapId, maxPlayers, timer)}
+            disabled={!isNicknameValid}
+            onClick={() => onCreateRoom(maxPlayers)}
           >
             {t(lang, "ui.createRoom")}
           </button>
@@ -115,11 +93,12 @@ const LobbyScreenComponent = ({
               <div className="row">
                 <button
                   data-testid={`join-room-btn-${r.roomId}`}
+                  disabled={!isNicknameValid}
                   onClick={() => onJoinRoom(r.roomId, false)}
                 >
                   {t(lang, "ui.join")}
                 </button>
-                <button onClick={() => onJoinRoom(r.roomId, true)}>
+                <button disabled={!isNicknameValid} onClick={() => onJoinRoom(r.roomId, true)}>
                   👁 {t(lang, "ui.watch")}
                 </button>
               </div>
@@ -127,7 +106,7 @@ const LobbyScreenComponent = ({
           ))}
         </div>
       </section>
-    </>
+    </div>
   );
 };
 
